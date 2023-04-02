@@ -262,7 +262,7 @@ var selectedBlankStyle = lipgloss.NewStyle().
 	Background(lipgloss.Color("#ff0000"))
 
 var availablePointStyle = lipgloss.NewStyle().
-	Background(lipgloss.Color("#0000ff"))
+	Background(lipgloss.Color("#212121"))
 
 func computeScores(g grid) map[player]int {
 	m := make(map[player]int)
@@ -277,7 +277,7 @@ func computeScores(g grid) map[player]int {
 }
 
 func (m model) View() string {
-	var s string
+	var gridString string
 	availablePoints := getAvailablePoints(m.grid)
 	scores := computeScores(m.grid)
 
@@ -287,64 +287,69 @@ func (m model) View() string {
 			if point == m.selected {
 				switch cell {
 				case DarkPlayer:
-					s += selectedDarkPlayerStyle.Render("X")
+					gridString += selectedDarkPlayerStyle.Render("X")
 				case LightPlayer:
-					s += selectedLightPlayerStyle.Render("O")
+					gridString += selectedLightPlayerStyle.Render("O")
 				default:
-					s += selectedBlankStyle.Render(" ")
+					gridString += selectedBlankStyle.Render(" ")
 				}
 			} else {
 				switch cell {
 				case DarkPlayer:
-					s += darkPlayerStyle.Render("X")
+					gridString += darkPlayerStyle.Render("X")
 				case LightPlayer:
-					s += lightPlayerStyle.Render("O")
+					gridString += lightPlayerStyle.Render("O")
 				default:
 					if slices.Contains(availablePoints, point) {
-						s += availablePointStyle.Render(" ")
+						gridString += availablePointStyle.Render(" ")
 					} else {
-						s += " "
+						gridString += " "
 					}
 				}
 			}
 
 			if j < len(row)-1 {
-				s += " "
+				gridString += " "
 			}
-		}
-
-		if i == 1 {
-			s += fmt.Sprintf("   %s (%s)'s turn", m.currentPlayer.String(), m.currentPlayer.toSymbol())
-		}
-
-		// TODO: Surely must be a better way to do this
-		if i == 3 {
-			s += "   "
-			if scores[LightPlayer] == scores[DarkPlayer] {
-				s += "Draw"
-			} else if scores[DarkPlayer] > scores[LightPlayer] {
-				s += fmt.Sprintf("%s winning!", DarkPlayer)
-			} else if scores[LightPlayer] > scores[DarkPlayer] {
-				s += fmt.Sprintf("%s winning!", LightPlayer)
-			}
-			s += " - "
-			s += fmt.Sprintf("%s: %d; %s: %d", DarkPlayer.String(), scores[DarkPlayer], LightPlayer.String(),
-				scores[LightPlayer])
-		}
-
-		if i == 5 {
-			s += "   Stats:"
-		}
-		if i == 6 {
-			s += fmt.Sprintf("   Total disks placed/flipped - %s: %d; %s: %d", DarkPlayer.String(), m.disksFlipped[DarkPlayer], LightPlayer.String(), m.disksFlipped[LightPlayer])
 		}
 
 		if i < len(m.grid)-1 {
-			s += "\n"
+			gridString += "\n"
 		}
 	}
 
-	return s
+	infoText := make([]string, 0, 10)
+	infoText = append(infoText, lipgloss.NewStyle().
+		Foreground(lipgloss.Color("63")).
+		Bold(true).
+		Render(fmt.Sprintf("%s (%s)'s turn", m.currentPlayer.String(), m.currentPlayer.toSymbol())))
+
+	var scoreString string
+	if scores[LightPlayer] == scores[DarkPlayer] {
+		scoreString += "Draw"
+	} else if scores[DarkPlayer] > scores[LightPlayer] {
+		scoreString += fmt.Sprintf("%s winning!", DarkPlayer)
+	} else if scores[LightPlayer] > scores[DarkPlayer] {
+		scoreString += fmt.Sprintf("%s winning!", LightPlayer)
+	}
+	scoreString += " - "
+	scoreString += fmt.Sprintf("%s: %d; %s: %d", DarkPlayer.String(), scores[DarkPlayer], LightPlayer.String(),
+		scores[LightPlayer])
+	infoText = append(infoText, scoreString)
+
+	infoText = append(infoText, "")
+
+	infoText = append(infoText, fmt.Sprintf("Total disks placed/flipped - %s: %d; %s: %d", DarkPlayer.String(), m.disksFlipped[DarkPlayer], LightPlayer.String(), m.disksFlipped[LightPlayer]))
+
+	gridString = lipgloss.NewStyle().
+		BorderStyle(lipgloss.RoundedBorder()).
+		BorderForeground(lipgloss.Color("63")).
+		MarginRight(6).
+		Render(gridString)
+
+	return lipgloss.NewStyle().
+		Padding(2, 6).
+		Render(lipgloss.JoinHorizontal(lipgloss.Top, gridString, lipgloss.JoinVertical(lipgloss.Left, infoText...)))
 }
 
 func main() {
