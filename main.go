@@ -6,6 +6,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"golang.org/x/exp/slices"
 	"os"
+	"strings"
 )
 
 // todo: resizing
@@ -277,7 +278,7 @@ func computeScores(g grid) map[player]int {
 }
 
 func (m model) View() string {
-	var gridString string
+	var gridStringBuilder strings.Builder
 	availablePoints := getAvailablePoints(m.grid)
 	scores := computeScores(m.grid)
 
@@ -287,34 +288,34 @@ func (m model) View() string {
 			if point == m.selected {
 				switch cell {
 				case DarkPlayer:
-					gridString += selectedDarkPlayerStyle.Render("X")
+					gridStringBuilder.WriteString(selectedDarkPlayerStyle.Render("X"))
 				case LightPlayer:
-					gridString += selectedLightPlayerStyle.Render("O")
+					gridStringBuilder.WriteString(selectedLightPlayerStyle.Render("O"))
 				default:
-					gridString += selectedBlankStyle.Render(" ")
+					gridStringBuilder.WriteString(selectedBlankStyle.Render(" "))
 				}
 			} else {
 				switch cell {
 				case DarkPlayer:
-					gridString += darkPlayerStyle.Render("X")
+					gridStringBuilder.WriteString(darkPlayerStyle.Render("X"))
 				case LightPlayer:
-					gridString += lightPlayerStyle.Render("O")
+					gridStringBuilder.WriteString(lightPlayerStyle.Render("O"))
 				default:
 					if slices.Contains(availablePoints, point) {
-						gridString += availablePointStyle.Render(" ")
+						gridStringBuilder.WriteString(availablePointStyle.Render(" "))
 					} else {
-						gridString += " "
+						gridStringBuilder.WriteString(" ")
 					}
 				}
 			}
 
 			if j < len(row)-1 {
-				gridString += " "
+				gridStringBuilder.WriteString(" ")
 			}
 		}
 
 		if i < len(m.grid)-1 {
-			gridString += "\n"
+			gridStringBuilder.WriteString("\n")
 		}
 	}
 
@@ -324,32 +325,34 @@ func (m model) View() string {
 		Bold(true).
 		Render(fmt.Sprintf("%s (%s)'s turn", m.currentPlayer.String(), m.currentPlayer.toSymbol())))
 
-	var scoreString string
+	var scoreStringBuilder strings.Builder
 	if scores[LightPlayer] == scores[DarkPlayer] {
-		scoreString += "Draw"
+		scoreStringBuilder.WriteString("Draw")
 	} else if scores[DarkPlayer] > scores[LightPlayer] {
-		scoreString += fmt.Sprintf("%s winning!", DarkPlayer)
+		scoreStringBuilder.WriteString(fmt.Sprintf("%s winning!", DarkPlayer))
 	} else if scores[LightPlayer] > scores[DarkPlayer] {
-		scoreString += fmt.Sprintf("%s winning!", LightPlayer)
+		scoreStringBuilder.WriteString(fmt.Sprintf("%s winning!", LightPlayer))
 	}
-	scoreString += " - "
-	scoreString += fmt.Sprintf("%s: %d; %s: %d", DarkPlayer.String(), scores[DarkPlayer], LightPlayer.String(),
-		scores[LightPlayer])
-	infoText = append(infoText, scoreString)
+	scoreStringBuilder.WriteString(" - ")
+	scoreStringBuilder.WriteString(fmt.Sprintf("%s: %d; %s: %d", DarkPlayer.String(), scores[DarkPlayer], LightPlayer.String(),
+		scores[LightPlayer]))
+	infoText = append(infoText, scoreStringBuilder.String())
 
 	infoText = append(infoText, "")
 
 	infoText = append(infoText, fmt.Sprintf("Total disks placed/flipped - %s: %d; %s: %d", DarkPlayer.String(), m.disksFlipped[DarkPlayer], LightPlayer.String(), m.disksFlipped[LightPlayer]))
 
-	gridString = lipgloss.NewStyle().
+	gridString := lipgloss.NewStyle().
 		BorderStyle(lipgloss.RoundedBorder()).
 		BorderForeground(lipgloss.Color("63")).
 		MarginRight(6).
-		Render(gridString)
+		Render(gridStringBuilder.String())
+
+	infoTextString := lipgloss.JoinVertical(lipgloss.Left, infoText...)
 
 	return lipgloss.NewStyle().
 		Padding(2, 6).
-		Render(lipgloss.JoinHorizontal(lipgloss.Top, gridString, lipgloss.JoinVertical(lipgloss.Left, infoText...)))
+		Render(lipgloss.JoinHorizontal(lipgloss.Top, gridString, infoTextString))
 }
 
 func main() {
