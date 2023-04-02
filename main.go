@@ -342,6 +342,19 @@ func (m model) View() string {
 
 	infoText = append(infoText, fmt.Sprintf("Total disks placed/flipped - %s: %d; %s: %d", DarkPlayer.String(), m.disksFlipped[DarkPlayer], LightPlayer.String(), m.disksFlipped[LightPlayer]))
 
+	if slices.Contains(availablePoints, m.selected) {
+		infoText = append(infoText, "", lipgloss.NewStyle().
+			Foreground(lipgloss.Color("241")).
+			Render("arrow keys: move • enter: place tile • q: exit"))
+	} else {
+		infoText = append(infoText, "", lipgloss.NewStyle().
+			Foreground(lipgloss.Color("241")).
+			Render("arrow keys: move • q: exit"))
+		infoText = append(infoText, lipgloss.NewStyle().
+			Foreground(lipgloss.Color("#cc0000")).
+			Render("Cannot place disk here"))
+	}
+
 	gridString := lipgloss.NewStyle().
 		BorderStyle(lipgloss.RoundedBorder()).
 		BorderForeground(lipgloss.Color("63")).
