@@ -10,6 +10,8 @@ import (
 )
 
 // todo: resizing
+// todo: win condition
+// todo: after each turn, show flipped tiles then wait for any key press
 
 const gridWidth = 8
 const gridHeight = 8
@@ -252,15 +254,20 @@ var lightPlayerStyle = lipgloss.NewStyle().
 	Background(lipgloss.Color("#ffffff"))
 
 var selectedDarkPlayerStyle = lipgloss.NewStyle().
-	Foreground(lipgloss.Color("#ff0000")).
+	Blink(true).
+	Underline(true).
+	Bold(true).
+	Foreground(lipgloss.Color("105")).
 	Background(lipgloss.Color("#000000"))
 
 var selectedLightPlayerStyle = lipgloss.NewStyle().
+	Blink(true).
 	Foreground(lipgloss.Color("#000000")).
-	Background(lipgloss.Color("#ff0000"))
+	Background(lipgloss.Color("105"))
 
 var selectedBlankStyle = lipgloss.NewStyle().
-	Background(lipgloss.Color("#ff0000"))
+	Blink(true).
+	Background(lipgloss.Color("105"))
 
 var availablePointStyle = lipgloss.NewStyle().
 	Background(lipgloss.Color("#212121"))
@@ -346,6 +353,9 @@ func (m model) View() string {
 		infoText = append(infoText, "", lipgloss.NewStyle().
 			Foreground(lipgloss.Color("241")).
 			Render("arrow keys: move • enter: place tile • q: exit"))
+		infoText = append(infoText, lipgloss.NewStyle().
+			Foreground(lipgloss.Color("#00cc00")).
+			Render("Can place disk here"))
 	} else {
 		infoText = append(infoText, "", lipgloss.NewStyle().
 			Foreground(lipgloss.Color("241")).
