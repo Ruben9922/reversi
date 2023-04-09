@@ -44,6 +44,7 @@ type view int
 const (
 	PointSelection view = iota
 	PointConfirmation
+	TitleView
 )
 
 type model struct {
@@ -75,7 +76,7 @@ func initialModel() model {
 	return model{
 		grid:          *newGrid(),
 		selectedPoint: vector2d{3, 3},
-		view:          PointSelection,
+		view:          TitleView,
 		currentPlayer: DarkPlayer,
 		disksFlipped:  make([]vector2d, 0),
 	}
@@ -128,6 +129,11 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.currentPlayer = LightPlayer
 		} else if m.currentPlayer == LightPlayer {
 			m.currentPlayer = DarkPlayer
+		}
+	case TitleView:
+		switch msg.(type) {
+		case tea.KeyMsg:
+			m.view = PointSelection
 		}
 	}
 
@@ -365,59 +371,78 @@ func (m model) View() string {
 		}
 	}
 
-	infoText := make([]string, 0, 10)
-	infoText = append(infoText, lipgloss.NewStyle().
-		Foreground(lipgloss.Color("63")).
-		Bold(true).
-		Render(fmt.Sprintf("%s (%s)'s turn", m.currentPlayer.String(), m.currentPlayer.toSymbol())))
-
-	var scoreStringBuilder strings.Builder
-	if scores[LightPlayer] == scores[DarkPlayer] {
-		scoreStringBuilder.WriteString("Draw")
-	} else if scores[DarkPlayer] > scores[LightPlayer] {
-		scoreStringBuilder.WriteString(fmt.Sprintf("%s winning!", DarkPlayer))
-	} else if scores[LightPlayer] > scores[DarkPlayer] {
-		scoreStringBuilder.WriteString(fmt.Sprintf("%s winning!", LightPlayer))
-	}
-	scoreStringBuilder.WriteString(" - ")
-	scoreStringBuilder.WriteString(fmt.Sprintf("%s: %d; %s: %d", DarkPlayer.String(), scores[DarkPlayer], LightPlayer.String(),
-		scores[LightPlayer]))
-	infoText = append(infoText, scoreStringBuilder.String())
-
-	switch m.view {
-	case PointSelection:
-		infoText = append(infoText, "", "Choose where to place your disk")
-		if slices.Contains(availablePoints, m.selectedPoint) {
-			infoText = append(infoText, lipgloss.NewStyle().
-				Foreground(lipgloss.Color("#00cc00")).
-				Render("Can place disk here"))
-			infoText = append(infoText, "", lipgloss.NewStyle().
-				Foreground(lipgloss.Color("241")).
-				Render("arrow keys: move • enter: place tile • q: exit"))
-		} else {
-			infoText = append(infoText, lipgloss.NewStyle().
-				Foreground(lipgloss.Color("#cc0000")).
-				Render("Cannot place disk here"))
-			infoText = append(infoText, "", lipgloss.NewStyle().
-				Foreground(lipgloss.Color("241")).
-				Render("arrow keys: move • q: exit"))
-		}
-	case PointConfirmation:
-		if len(m.disksFlipped) == 0 {
-			infoText = append(infoText, "", "No disks flipped this time")
-		} else {
-			infoText = append(infoText, "", fmt.Sprintf("%s flipped %s!", m.currentPlayer, english.Plural(len(m.disksFlipped), "disk", "")))
-		}
-		infoText = append(infoText, "", lipgloss.NewStyle().
-			Foreground(lipgloss.Color("241")).
-			Render("any key: continue"))
-	}
-
 	gridString := lipgloss.NewStyle().
 		BorderStyle(lipgloss.RoundedBorder()).
 		BorderForeground(lipgloss.Color("63")).
 		MarginRight(6).
 		Render(gridStringBuilder.String())
+
+	var infoText []string
+	if m.view == TitleView {
+		const titleText = ` ____                         _ 
+|  _ \ _____   _____ _ __ ___(_)
+| |_) / _ \ \ / / _ \ '__/ __| |
+|  _ <  __/\ V /  __/ |  \__ \ |
+|_| \_\___| \_/ \___|_|  |___/_|`
+
+		infoText = []string{
+			titleText,
+			"",
+			"Press any key to start...",
+			"",
+			lipgloss.NewStyle().
+				Foreground(lipgloss.Color("241")).
+				Render("any key: continue"),
+		}
+	} else {
+		infoText = make([]string, 0, 10)
+		infoText = append(infoText, lipgloss.NewStyle().
+			Foreground(lipgloss.Color("63")).
+			Bold(true).
+			Render(fmt.Sprintf("%s (%s)'s turn", m.currentPlayer.String(), m.currentPlayer.toSymbol())))
+
+		var scoreStringBuilder strings.Builder
+		if scores[LightPlayer] == scores[DarkPlayer] {
+			scoreStringBuilder.WriteString("Draw")
+		} else if scores[DarkPlayer] > scores[LightPlayer] {
+			scoreStringBuilder.WriteString(fmt.Sprintf("%s winning!", DarkPlayer))
+		} else if scores[LightPlayer] > scores[DarkPlayer] {
+			scoreStringBuilder.WriteString(fmt.Sprintf("%s winning!", LightPlayer))
+		}
+		scoreStringBuilder.WriteString(" - ")
+		scoreStringBuilder.WriteString(fmt.Sprintf("%s: %d; %s: %d", DarkPlayer.String(), scores[DarkPlayer], LightPlayer.String(),
+			scores[LightPlayer]))
+		infoText = append(infoText, scoreStringBuilder.String())
+
+		switch m.view {
+		case PointSelection:
+			infoText = append(infoText, "", "Choose where to place your disk")
+			if slices.Contains(availablePoints, m.selectedPoint) {
+				infoText = append(infoText, lipgloss.NewStyle().
+					Foreground(lipgloss.Color("#00cc00")).
+					Render("Can place disk here"))
+				infoText = append(infoText, "", lipgloss.NewStyle().
+					Foreground(lipgloss.Color("241")).
+					Render("arrow keys: move • enter: place tile • q: exit"))
+			} else {
+				infoText = append(infoText, lipgloss.NewStyle().
+					Foreground(lipgloss.Color("#cc0000")).
+					Render("Cannot place disk here"))
+				infoText = append(infoText, "", lipgloss.NewStyle().
+					Foreground(lipgloss.Color("241")).
+					Render("arrow keys: move • q: exit"))
+			}
+		case PointConfirmation:
+			if len(m.disksFlipped) == 0 {
+				infoText = append(infoText, "", "No disks flipped this time")
+			} else {
+				infoText = append(infoText, "", fmt.Sprintf("%s flipped %s!", m.currentPlayer, english.Plural(len(m.disksFlipped), "disk", "")))
+			}
+			infoText = append(infoText, "", lipgloss.NewStyle().
+				Foreground(lipgloss.Color("241")).
+				Render("any key: continue"))
+		}
+	}
 
 	infoTextString := lipgloss.JoinVertical(lipgloss.Left, infoText...)
 
