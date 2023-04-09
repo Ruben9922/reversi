@@ -11,7 +11,6 @@ import (
 
 // todo: resizing
 // todo: win condition
-// todo: after each turn, show flipped tiles then wait for any key press
 
 const gridWidth = 8
 const gridHeight = 8
@@ -39,11 +38,20 @@ func (p player) toSymbol() string {
 
 type grid [gridHeight][gridWidth]player
 
+type view int
+
+const (
+	PointSelection view = iota
+	PointConfirmation
+)
+
 type model struct {
-	grid          grid
-	selected      vector2d
-	currentPlayer player
-	disksFlipped  map[player]int
+	grid                           grid
+	selectedPoint                  vector2d
+	view                           view
+	currentPlayer                  player
+	totalDisksFlippedCountByPlayer map[player]int
+	disksFlipped                   []vector2d
 }
 
 func newGrid() *grid {
@@ -65,10 +73,12 @@ func newGrid() *grid {
 
 func initialModel() model {
 	return model{
-		grid:          *newGrid(),
-		selected:      vector2d{3, 3},
-		currentPlayer: DarkPlayer,
-		disksFlipped:  make(map[player]int),
+		grid:                           *newGrid(),
+		selectedPoint:                  vector2d{3, 3},
+		view:                           PointSelection,
+		currentPlayer:                  DarkPlayer,
+		totalDisksFlippedCountByPlayer: make(map[player]int),
+		disksFlipped:                   make([]vector2d, 0),
 	}
 }
 
@@ -77,40 +87,49 @@ func (m model) Init() tea.Cmd {
 }
 
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	switch msg := msg.(type) {
-	case tea.KeyMsg:
-		switch msg.String() {
-		case "ctrl+c", "q":
-			return m, tea.Quit
-		case "up", "w":
-			m.selected.y--
-			m.selected.y = (m.selected.y + gridHeight) % gridHeight
-		case "down", "s":
-			m.selected.y++
-			m.selected.y = (m.selected.y + gridHeight) % gridHeight
-		case "left", "a":
-			m.selected.x--
-			m.selected.x = (m.selected.x + gridWidth) % gridWidth
-		case "right", "d":
-			m.selected.x++
-			m.selected.x = (m.selected.x + gridWidth) % gridWidth
-		case "enter", " ":
-			availablePoints := getAvailablePoints(m.grid)
+	switch m.view {
+	case PointSelection:
+		switch msg := msg.(type) {
+		case tea.KeyMsg:
+			switch msg.String() {
+			case "ctrl+c", "q":
+				return m, tea.Quit
+			case "up", "w":
+				m.selectedPoint.y--
+				m.selectedPoint.y = (m.selectedPoint.y + gridHeight) % gridHeight
+			case "down", "s":
+				m.selectedPoint.y++
+				m.selectedPoint.y = (m.selectedPoint.y + gridHeight) % gridHeight
+			case "left", "a":
+				m.selectedPoint.x--
+				m.selectedPoint.x = (m.selectedPoint.x + gridWidth) % gridWidth
+			case "right", "d":
+				m.selectedPoint.x++
+				m.selectedPoint.x = (m.selectedPoint.x + gridWidth) % gridWidth
+			case "enter", " ":
+				availablePoints := getAvailablePoints(m.grid)
 
-			if slices.Contains(availablePoints, m.selected) {
-				m.grid[m.selected.y][m.selected.x] = m.currentPlayer
-				m.disksFlipped[m.currentPlayer]++
+				if slices.Contains(availablePoints, m.selectedPoint) {
+					m.grid[m.selectedPoint.y][m.selectedPoint.x] = m.currentPlayer
+					m.totalDisksFlippedCountByPlayer[m.currentPlayer]++
 
-				flip(&m)
+					flip(&m)
 
-				if m.currentPlayer == DarkPlayer {
-					m.currentPlayer = LightPlayer
-				} else if m.currentPlayer == LightPlayer {
-					m.currentPlayer = DarkPlayer
+					m.view = PointConfirmation
 				}
-			} else {
-				// todo: print error message
 			}
+		}
+	case PointConfirmation:
+		switch msg.(type) {
+		case tea.KeyMsg:
+			m.view = PointSelection
+		}
+
+		// Update current player *after* displaying PointConfirmation view
+		if m.currentPlayer == DarkPlayer {
+			m.currentPlayer = LightPlayer
+		} else if m.currentPlayer == LightPlayer {
+			m.currentPlayer = DarkPlayer
 		}
 	}
 
@@ -153,16 +172,16 @@ func getAvailablePoints(g grid) []vector2d {
 }
 
 // so confused lol
-//func getNextAvailablePoint(availablePoints []vector2d, currentPoint vector2d, direction vector2d) vector2d {
+//func getNextAvailablePoint(availablePoints []vector2d, selectedPoint vector2d, direction vector2d) vector2d {
 //	availablePointsInDirection := make([]vector2d, 0, len(availablePoints))
 //	for _, p := range availablePoints {
-//		if (direction.x != 0 || p.x == currentPoint.x) && (direction.y != 0 || p.y == currentPoint.y) {
+//		if (direction.x != 0 || p.x == selectedPoint.x) && (direction.y != 0 || p.y == selectedPoint.y) {
 //			availablePointsInDirection = append(availablePointsInDirection, p)
 //		}
 //	}
 //
 //	if len(availablePointsInDirection) == 0 {
-//		return currentPoint
+//		return selectedPoint
 //	}
 //
 //	sortedAvailablePointsInDirection := make([]vector2d, len(availablePointsInDirection))
@@ -172,19 +191,19 @@ func getAvailablePoints(g grid) []vector2d {
 //		point2 := sortedAvailablePointsInDirection[j]
 //
 //		if direction.x == -1 {
-//			if point1.x < currentPoint.x {
+//			if point1.x < selectedPoint.x {
 //				point1.x += gridWidth
 //			}
-//			if point2.x < currentPoint.x {
+//			if point2.x < selectedPoint.x {
 //				point2.x += gridWidth
 //			}
 //
 //			return point2.x > point2.x
 //		} else if direction.x == 1 {
-//			if point1.x > currentPoint.x {
+//			if point1.x > selectedPoint.x {
 //				point1.x += gridWidth
 //			}
-//			if point2.x > currentPoint.x {
+//			if point2.x > selectedPoint.x {
 //				point2.x += gridWidth
 //			}
 //
@@ -212,8 +231,9 @@ func flip(m *model) {
 		{-1, 1},
 	}
 
+	m.disksFlipped = make([]vector2d, 0, 10)
 	for _, d := range directions {
-		currentPoint := m.selected
+		currentPoint := m.selectedPoint
 		isInsideGrid := isPointInsideGrid(currentPoint)
 		isNotBlank := m.grid[currentPoint.y][currentPoint.x] != Blank
 		isCurrentPlayer := false
@@ -238,9 +258,14 @@ func flip(m *model) {
 		// If blank cell or edge of grid is reached, don't change any disks
 		if isCurrentPlayer {
 			for _, p := range pointsToFlip {
+				// Flip disk
 				m.grid[p.y][p.x] = m.currentPlayer
-				m.disksFlipped[m.currentPlayer]++
+
+				// Increment total disks flipped
+				m.totalDisksFlippedCountByPlayer[m.currentPlayer]++
 			}
+
+			m.disksFlipped = append(m.disksFlipped, pointsToFlip...)
 		}
 	}
 }
@@ -292,7 +317,8 @@ func (m model) View() string {
 	for i, row := range m.grid {
 		for j, cell := range row {
 			point := vector2d{j, i}
-			if point == m.selected {
+			if (m.view == PointSelection && point == m.selectedPoint) ||
+				(m.view == PointConfirmation && slices.Contains(m.disksFlipped, point)) {
 				switch cell {
 				case DarkPlayer:
 					gridStringBuilder.WriteString(selectedDarkPlayerStyle.Render("X"))
@@ -345,24 +371,35 @@ func (m model) View() string {
 		scores[LightPlayer]))
 	infoText = append(infoText, scoreStringBuilder.String())
 
-	infoText = append(infoText, "")
+	switch m.view {
+	case PointSelection:
+		infoText = append(infoText, "")
+		infoText = append(infoText, fmt.Sprintf("Total disks placed/flipped - %s: %d; %s: %d", DarkPlayer.String(), m.totalDisksFlippedCountByPlayer[DarkPlayer], LightPlayer.String(), m.totalDisksFlippedCountByPlayer[LightPlayer]))
 
-	infoText = append(infoText, fmt.Sprintf("Total disks placed/flipped - %s: %d; %s: %d", DarkPlayer.String(), m.disksFlipped[DarkPlayer], LightPlayer.String(), m.disksFlipped[LightPlayer]))
-
-	if slices.Contains(availablePoints, m.selected) {
-		infoText = append(infoText, "", lipgloss.NewStyle().
-			Foreground(lipgloss.Color("241")).
-			Render("arrow keys: move • enter: place tile • q: exit"))
+		if slices.Contains(availablePoints, m.selectedPoint) {
+			infoText = append(infoText, "", lipgloss.NewStyle().
+				Foreground(lipgloss.Color("241")).
+				Render("arrow keys: move • enter: place tile • q: exit"))
+			infoText = append(infoText, lipgloss.NewStyle().
+				Foreground(lipgloss.Color("#00cc00")).
+				Render("Can place disk here"))
+		} else {
+			infoText = append(infoText, "", lipgloss.NewStyle().
+				Foreground(lipgloss.Color("241")).
+				Render("arrow keys: move • q: exit"))
+			infoText = append(infoText, lipgloss.NewStyle().
+				Foreground(lipgloss.Color("#cc0000")).
+				Render("Cannot place disk here"))
+		}
+	case PointConfirmation:
+		if len(m.disksFlipped) == 0 {
+			infoText = append(infoText, "", "No disks flipped this time")
+		} else {
+			infoText = append(infoText, "", fmt.Sprintf("%s flipped %d disks!", m.currentPlayer, len(m.disksFlipped)))
+		}
 		infoText = append(infoText, lipgloss.NewStyle().
-			Foreground(lipgloss.Color("#00cc00")).
-			Render("Can place disk here"))
-	} else {
-		infoText = append(infoText, "", lipgloss.NewStyle().
 			Foreground(lipgloss.Color("241")).
-			Render("arrow keys: move • q: exit"))
-		infoText = append(infoText, lipgloss.NewStyle().
-			Foreground(lipgloss.Color("#cc0000")).
-			Render("Cannot place disk here"))
+			Render("any key: continue"))
 	}
 
 	gridString := lipgloss.NewStyle().
