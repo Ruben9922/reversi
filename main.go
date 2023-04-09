@@ -273,19 +273,16 @@ var lightPlayerStyle = lipgloss.NewStyle().
 	Background(lipgloss.Color("#ffffff"))
 
 var selectedDarkPlayerStyle = lipgloss.NewStyle().
-	Blink(true).
 	Underline(true).
 	Bold(true).
 	Foreground(lipgloss.Color("105")).
 	Background(lipgloss.Color("#000000"))
 
 var selectedLightPlayerStyle = lipgloss.NewStyle().
-	Blink(true).
 	Foreground(lipgloss.Color("#000000")).
 	Background(lipgloss.Color("105"))
 
 var selectedBlankStyle = lipgloss.NewStyle().
-	Blink(true).
 	Background(lipgloss.Color("105"))
 
 var availablePointStyle = lipgloss.NewStyle().
