@@ -285,6 +285,19 @@ var selectedLightPlayerStyle = lipgloss.NewStyle().
 var selectedBlankStyle = lipgloss.NewStyle().
 	Background(lipgloss.Color("105"))
 
+const highlightedColor = lipgloss.Color("#444444")
+
+var highlightedDarkPlayerStyle = lipgloss.NewStyle().
+	Foreground(highlightedColor).
+	Background(lipgloss.Color("#000000"))
+
+var highlightedLightPlayerStyle = lipgloss.NewStyle().
+	Foreground(lipgloss.Color("#000000")).
+	Background(highlightedColor)
+
+var highlightedBlankStyle = lipgloss.NewStyle().
+	Background(highlightedColor)
+
 var availablePointStyle = lipgloss.NewStyle().
 	Background(lipgloss.Color("#212121"))
 
@@ -308,8 +321,7 @@ func (m model) View() string {
 	for i, row := range m.grid {
 		for j, cell := range row {
 			point := vector2d{j, i}
-			if (m.view == PointSelection && point == m.selectedPoint) ||
-				(m.view == PointConfirmation && slices.Contains(m.disksFlipped, point)) {
+			if m.view == PointSelection && point == m.selectedPoint {
 				switch cell {
 				case DarkPlayer:
 					gridStringBuilder.WriteString(selectedDarkPlayerStyle.Render("X"))
@@ -317,6 +329,15 @@ func (m model) View() string {
 					gridStringBuilder.WriteString(selectedLightPlayerStyle.Render("O"))
 				default:
 					gridStringBuilder.WriteString(selectedBlankStyle.Render(" "))
+				}
+			} else if m.view == PointConfirmation && m.grid[point.y][point.x] != Blank && !slices.Contains(m.disksFlipped, point) {
+				switch cell {
+				case DarkPlayer:
+					gridStringBuilder.WriteString(highlightedDarkPlayerStyle.Render("X"))
+				case LightPlayer:
+					gridStringBuilder.WriteString(highlightedLightPlayerStyle.Render("O"))
+				default:
+					gridStringBuilder.WriteString(highlightedBlankStyle.Render(" "))
 				}
 			} else {
 				switch cell {
