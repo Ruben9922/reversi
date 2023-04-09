@@ -367,20 +367,21 @@ func (m model) View() string {
 
 	switch m.view {
 	case PointSelection:
+		infoText = append(infoText, "", "Choose where to place your disk")
 		if slices.Contains(availablePoints, m.selectedPoint) {
-			infoText = append(infoText, "", lipgloss.NewStyle().
-				Foreground(lipgloss.Color("241")).
-				Render("arrow keys: move • enter: place tile • q: exit"))
 			infoText = append(infoText, lipgloss.NewStyle().
 				Foreground(lipgloss.Color("#00cc00")).
 				Render("Can place disk here"))
-		} else {
 			infoText = append(infoText, "", lipgloss.NewStyle().
 				Foreground(lipgloss.Color("241")).
-				Render("arrow keys: move • q: exit"))
+				Render("arrow keys: move • enter: place tile • q: exit"))
+		} else {
 			infoText = append(infoText, lipgloss.NewStyle().
 				Foreground(lipgloss.Color("#cc0000")).
 				Render("Cannot place disk here"))
+			infoText = append(infoText, "", lipgloss.NewStyle().
+				Foreground(lipgloss.Color("241")).
+				Render("arrow keys: move • q: exit"))
 		}
 	case PointConfirmation:
 		if len(m.disksFlipped) == 0 {
@@ -388,7 +389,7 @@ func (m model) View() string {
 		} else {
 			infoText = append(infoText, "", fmt.Sprintf("%s flipped %d disks!", m.currentPlayer, len(m.disksFlipped)))
 		}
-		infoText = append(infoText, lipgloss.NewStyle().
+		infoText = append(infoText, "", lipgloss.NewStyle().
 			Foreground(lipgloss.Color("241")).
 			Render("any key: continue"))
 	}
