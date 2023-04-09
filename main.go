@@ -46,12 +46,11 @@ const (
 )
 
 type model struct {
-	grid                           grid
-	selectedPoint                  vector2d
-	view                           view
-	currentPlayer                  player
-	totalDisksFlippedCountByPlayer map[player]int
-	disksFlipped                   []vector2d
+	grid          grid
+	selectedPoint vector2d
+	view          view
+	currentPlayer player
+	disksFlipped  []vector2d
 }
 
 func newGrid() *grid {
@@ -73,12 +72,11 @@ func newGrid() *grid {
 
 func initialModel() model {
 	return model{
-		grid:                           *newGrid(),
-		selectedPoint:                  vector2d{3, 3},
-		view:                           PointSelection,
-		currentPlayer:                  DarkPlayer,
-		totalDisksFlippedCountByPlayer: make(map[player]int),
-		disksFlipped:                   make([]vector2d, 0),
+		grid:          *newGrid(),
+		selectedPoint: vector2d{3, 3},
+		view:          PointSelection,
+		currentPlayer: DarkPlayer,
+		disksFlipped:  make([]vector2d, 0),
 	}
 }
 
@@ -111,7 +109,6 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 				if slices.Contains(availablePoints, m.selectedPoint) {
 					m.grid[m.selectedPoint.y][m.selectedPoint.x] = m.currentPlayer
-					m.totalDisksFlippedCountByPlayer[m.currentPlayer]++
 
 					flip(&m)
 
@@ -260,9 +257,6 @@ func flip(m *model) {
 			for _, p := range pointsToFlip {
 				// Flip disk
 				m.grid[p.y][p.x] = m.currentPlayer
-
-				// Increment total disks flipped
-				m.totalDisksFlippedCountByPlayer[m.currentPlayer]++
 			}
 
 			m.disksFlipped = append(m.disksFlipped, pointsToFlip...)
@@ -373,9 +367,6 @@ func (m model) View() string {
 
 	switch m.view {
 	case PointSelection:
-		infoText = append(infoText, "")
-		infoText = append(infoText, fmt.Sprintf("Total disks placed/flipped - %s: %d; %s: %d", DarkPlayer.String(), m.totalDisksFlippedCountByPlayer[DarkPlayer], LightPlayer.String(), m.totalDisksFlippedCountByPlayer[LightPlayer]))
-
 		if slices.Contains(availablePoints, m.selectedPoint) {
 			infoText = append(infoText, "", lipgloss.NewStyle().
 				Foreground(lipgloss.Color("241")).
