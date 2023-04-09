@@ -4,6 +4,7 @@ import (
 	"fmt"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/dustin/go-humanize/english"
 	"golang.org/x/exp/slices"
 	"os"
 	"strings"
@@ -405,7 +406,7 @@ func (m model) View() string {
 		if len(m.disksFlipped) == 0 {
 			infoText = append(infoText, "", "No disks flipped this time")
 		} else {
-			infoText = append(infoText, "", fmt.Sprintf("%s flipped %d disks!", m.currentPlayer, len(m.disksFlipped)))
+			infoText = append(infoText, "", fmt.Sprintf("%s flipped %s!", m.currentPlayer, english.Plural(len(m.disksFlipped), "disk", "")))
 		}
 		infoText = append(infoText, "", lipgloss.NewStyle().
 			Foreground(lipgloss.Color("241")).
