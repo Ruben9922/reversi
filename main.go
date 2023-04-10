@@ -122,13 +122,13 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		switch msg.(type) {
 		case tea.KeyMsg:
 			m.view = PointSelection
-		}
 
-		// Update current player *after* displaying PointConfirmation view
-		if m.currentPlayer == DarkPlayer {
-			m.currentPlayer = LightPlayer
-		} else if m.currentPlayer == LightPlayer {
-			m.currentPlayer = DarkPlayer
+			// Update current player *after* displaying PointConfirmation view
+			if m.currentPlayer == DarkPlayer {
+				m.currentPlayer = LightPlayer
+			} else if m.currentPlayer == LightPlayer {
+				m.currentPlayer = DarkPlayer
+			}
 		}
 	case TitleView:
 		switch msg.(type) {
