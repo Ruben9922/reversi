@@ -154,9 +154,14 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		}
 	case GameOverView:
-		switch msg.(type) {
+		switch msg := msg.(type) {
 		case tea.KeyMsg:
-			return m, tea.Quit
+			switch msg.String() {
+			case "enter":
+				return initialModel(), nil
+			default:
+				return m, tea.Quit
+			}
 		}
 	}
 
@@ -449,7 +454,7 @@ func (m model) View() string {
 			"",
 			lipgloss.NewStyle().
 				Foreground(lipgloss.Color("241")).
-				Render("any key: quit"),
+				Render("enter: play again • any other key: quit"),
 		}
 	} else {
 		infoText = make([]string, 0, 10)
