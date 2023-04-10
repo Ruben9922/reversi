@@ -45,6 +45,7 @@ const (
 	PointSelection view = iota
 	PointConfirmation
 	TitleView
+	QuitConfirmation
 )
 
 type model struct {
@@ -93,7 +94,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case tea.KeyMsg:
 			switch msg.String() {
 			case "ctrl+c", "q":
-				return m, tea.Quit
+				m.view = QuitConfirmation
 			case "up", "w":
 				m.selectedPoint.y--
 				m.selectedPoint.y = (m.selectedPoint.y + gridHeight) % gridHeight
@@ -134,6 +135,16 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		switch msg.(type) {
 		case tea.KeyMsg:
 			m.view = PointSelection
+		}
+	case QuitConfirmation:
+		switch msg := msg.(type) {
+		case tea.KeyMsg:
+			switch msg.String() {
+			case "enter":
+				return m, tea.Quit
+			default:
+				m.view = PointSelection
+			}
 		}
 	}
 
@@ -393,6 +404,14 @@ func (m model) View() string {
 			lipgloss.NewStyle().
 				Foreground(lipgloss.Color("241")).
 				Render("any key: continue"),
+		}
+	} else if m.view == QuitConfirmation {
+		infoText = []string{
+			"Are you sure you want to quit? Any game progress will be lost.",
+			"",
+			lipgloss.NewStyle().
+				Foreground(lipgloss.Color("241")).
+				Render("enter: quit • any other key: cancel"),
 		}
 	} else {
 		infoText = make([]string, 0, 10)
