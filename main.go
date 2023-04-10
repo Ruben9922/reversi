@@ -11,7 +11,6 @@ import (
 )
 
 // todo: resizing
-// todo: win condition
 
 const gridWidth = 8
 const gridHeight = 8
@@ -46,6 +45,7 @@ const (
 	PointConfirmation
 	TitleView
 	QuitConfirmation
+	GameOverView
 )
 
 type model struct {
@@ -115,7 +115,14 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 					flip(&m)
 
-					m.view = PointConfirmation
+					// If no available points at the end of the turn, it's game over
+					// Otherwise continue game and switch to PointConfirmation view
+					availablePoints = getAvailablePoints(m.grid)
+					if len(availablePoints) == 0 {
+						m.view = GameOverView
+					} else {
+						m.view = PointConfirmation
+					}
 				}
 			}
 		}
@@ -145,6 +152,11 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			default:
 				m.view = PointSelection
 			}
+		}
+	case GameOverView:
+		switch msg.(type) {
+		case tea.KeyMsg:
+			return m, tea.Quit
 		}
 	}
 
@@ -412,6 +424,32 @@ func (m model) View() string {
 			lipgloss.NewStyle().
 				Foreground(lipgloss.Color("241")).
 				Render("enter: quit • any other key: cancel"),
+		}
+	} else if m.view == GameOverView {
+		var resultString string
+		if scores[LightPlayer] == scores[DarkPlayer] {
+			resultString = "Draw!"
+		} else if scores[DarkPlayer] > scores[LightPlayer] {
+			resultString = fmt.Sprintf("%s won!", DarkPlayer)
+		} else if scores[LightPlayer] > scores[DarkPlayer] {
+			resultString = fmt.Sprintf("%s won!", LightPlayer)
+		}
+
+		scoreString := fmt.Sprintf("%s: %d; %s: %d", DarkPlayer.String(), scores[DarkPlayer], LightPlayer.String(),
+			scores[LightPlayer])
+
+		infoText = []string{
+			lipgloss.NewStyle().
+				Foreground(lipgloss.Color("63")).
+				Bold(true).
+				Render("Game over!"),
+			"",
+			resultString,
+			scoreString,
+			"",
+			lipgloss.NewStyle().
+				Foreground(lipgloss.Color("241")).
+				Render("any key: quit"),
 		}
 	} else {
 		infoText = make([]string, 0, 10)
