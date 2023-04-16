@@ -10,8 +10,6 @@ import (
 	"strings"
 )
 
-// todo: resizing
-
 const gridWidth = 8
 const gridHeight = 8
 
@@ -54,6 +52,7 @@ type model struct {
 	view          view
 	currentPlayer player
 	disksFlipped  []vector2d
+	windowSize    vector2d
 }
 
 func newGrid() *grid {
@@ -88,10 +87,10 @@ func (m model) Init() tea.Cmd {
 }
 
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	switch m.view {
-	case PointSelection:
-		switch msg := msg.(type) {
-		case tea.KeyMsg:
+	switch msg := msg.(type) {
+	case tea.KeyMsg:
+		switch m.view {
+		case PointSelection:
 			switch msg.String() {
 			case "ctrl+c", "q":
 				m.view = QuitConfirmation
@@ -125,10 +124,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					}
 				}
 			}
-		}
-	case PointConfirmation:
-		switch msg.(type) {
-		case tea.KeyMsg:
+		case PointConfirmation:
 			m.view = PointSelection
 
 			// Update current player *after* displaying PointConfirmation view
@@ -137,31 +133,27 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			} else if m.currentPlayer == LightPlayer {
 				m.currentPlayer = DarkPlayer
 			}
-		}
-	case TitleView:
-		switch msg.(type) {
-		case tea.KeyMsg:
+		case TitleView:
 			m.view = PointSelection
-		}
-	case QuitConfirmation:
-		switch msg := msg.(type) {
-		case tea.KeyMsg:
+		case QuitConfirmation:
 			switch msg.String() {
 			case "enter":
 				return m, tea.Quit
 			default:
 				m.view = PointSelection
 			}
-		}
-	case GameOverView:
-		switch msg := msg.(type) {
-		case tea.KeyMsg:
+		case GameOverView:
 			switch msg.String() {
 			case "enter":
 				return initialModel(), nil
 			default:
 				return m, tea.Quit
 			}
+		}
+	case tea.WindowSizeMsg:
+		m.windowSize = vector2d{
+			x: msg.Width,
+			y: msg.Height,
 		}
 	}
 
@@ -349,10 +341,34 @@ func computeScores(g grid) map[player]int {
 }
 
 func (m model) View() string {
-	var gridStringBuilder strings.Builder
-	availablePoints := getAvailablePoints(m.grid)
 	scores := computeScores(m.grid)
 
+	gridString := createGridView(m)
+
+	var text string
+	maxTextWidth := m.windowSize.x - gridWidth - 14
+	switch m.view {
+	case TitleView:
+		text = createTitleView(maxTextWidth)
+	case QuitConfirmation:
+		text = createQuitConfirmationView(maxTextWidth)
+	case GameOverView:
+		text = createGameOverView(scores, maxTextWidth)
+	case PointSelection:
+		text = createPointSelectionView(m, scores, maxTextWidth)
+	case PointConfirmation:
+		text = createPointConfirmationView(m, scores, maxTextWidth)
+	}
+
+	return lipgloss.NewStyle().
+		Padding(2, 6).
+		Render(lipgloss.JoinHorizontal(lipgloss.Top, gridString, text))
+}
+
+func createGridView(m model) string {
+	availablePoints := getAvailablePoints(m.grid)
+
+	var gridStringBuilder strings.Builder
 	for i, row := range m.grid {
 		for j, cell := range row {
 			point := vector2d{j, i}
@@ -399,118 +415,151 @@ func (m model) View() string {
 		}
 	}
 
-	gridString := lipgloss.NewStyle().
+	return lipgloss.NewStyle().
 		BorderStyle(lipgloss.RoundedBorder()).
 		BorderForeground(lipgloss.Color("63")).
 		MarginRight(6).
 		Render(gridStringBuilder.String())
+}
 
-	var infoText []string
-	if m.view == TitleView {
-		const titleText = ` ____                         _ 
+func createTitleView(maxWidth int) string {
+	const title = ` ____                         _ 
 |  _ \ _____   _____ _ __ ___(_)
 | |_) / _ \ \ / / _ \ '__/ __| |
 |  _ <  __/\ V /  __/ |  \__ \ |
 |_| \_\___| \_/ \___|_|  |___/_|`
 
-		infoText = []string{
-			titleText,
-			"",
-			"Press any key to start...",
-			"",
-			lipgloss.NewStyle().
-				Foreground(lipgloss.Color("241")).
-				Render("any key: continue"),
-		}
-	} else if m.view == QuitConfirmation {
-		infoText = []string{
-			"Are you sure you want to quit? Any game progress will be lost.",
-			"",
-			lipgloss.NewStyle().
-				Foreground(lipgloss.Color("241")).
-				Render("enter: quit • any other key: cancel"),
-		}
-	} else if m.view == GameOverView {
-		var resultString string
-		if scores[LightPlayer] == scores[DarkPlayer] {
-			resultString = "Draw!"
-		} else if scores[DarkPlayer] > scores[LightPlayer] {
-			resultString = fmt.Sprintf("%s won!", DarkPlayer)
-		} else if scores[LightPlayer] > scores[DarkPlayer] {
-			resultString = fmt.Sprintf("%s won!", LightPlayer)
-		}
+	textStrings := []string{
+		"",
+		"Press any key to start...",
+		"",
+		lipgloss.NewStyle().
+			Foreground(lipgloss.Color("241")).
+			Render("any key: continue"),
+	}
+	text := lipgloss.NewStyle().
+		Width(maxWidth).
+		Render(lipgloss.JoinVertical(lipgloss.Left, textStrings...))
 
-		scoreString := fmt.Sprintf("%s: %d; %s: %d", DarkPlayer.String(), scores[DarkPlayer], LightPlayer.String(),
-			scores[LightPlayer])
+	return lipgloss.JoinVertical(lipgloss.Left, title, text)
+}
 
-		infoText = []string{
-			lipgloss.NewStyle().
-				Foreground(lipgloss.Color("63")).
-				Bold(true).
-				Render("Game over!"),
-			"",
-			resultString,
-			scoreString,
-			"",
-			lipgloss.NewStyle().
-				Foreground(lipgloss.Color("241")).
-				Render("enter: play again • any other key: quit"),
-		}
-	} else {
-		infoText = make([]string, 0, 10)
-		infoText = append(infoText, lipgloss.NewStyle().
-			Foreground(lipgloss.Color("63")).
-			Bold(true).
-			Render(fmt.Sprintf("%s (%s)'s turn", m.currentPlayer.String(), m.currentPlayer.toSymbol())))
-
-		var scoreStringBuilder strings.Builder
-		if scores[LightPlayer] == scores[DarkPlayer] {
-			scoreStringBuilder.WriteString("Draw")
-		} else if scores[DarkPlayer] > scores[LightPlayer] {
-			scoreStringBuilder.WriteString(fmt.Sprintf("%s winning!", DarkPlayer))
-		} else if scores[LightPlayer] > scores[DarkPlayer] {
-			scoreStringBuilder.WriteString(fmt.Sprintf("%s winning!", LightPlayer))
-		}
-		scoreStringBuilder.WriteString(" - ")
-		scoreStringBuilder.WriteString(fmt.Sprintf("%s: %d; %s: %d", DarkPlayer.String(), scores[DarkPlayer], LightPlayer.String(),
-			scores[LightPlayer]))
-		infoText = append(infoText, scoreStringBuilder.String())
-
-		switch m.view {
-		case PointSelection:
-			infoText = append(infoText, "", "Choose where to place your disk")
-			if slices.Contains(availablePoints, m.selectedPoint) {
-				infoText = append(infoText, lipgloss.NewStyle().
-					Foreground(lipgloss.Color("#00cc00")).
-					Render("Can place disk here"))
-				infoText = append(infoText, "", lipgloss.NewStyle().
-					Foreground(lipgloss.Color("241")).
-					Render("arrow keys: move • enter: place tile • q: exit"))
-			} else {
-				infoText = append(infoText, lipgloss.NewStyle().
-					Foreground(lipgloss.Color("#cc0000")).
-					Render("Cannot place disk here"))
-				infoText = append(infoText, "", lipgloss.NewStyle().
-					Foreground(lipgloss.Color("241")).
-					Render("arrow keys: move • q: exit"))
-			}
-		case PointConfirmation:
-			if len(m.disksFlipped) == 0 {
-				infoText = append(infoText, "", "No disks flipped this time")
-			} else {
-				infoText = append(infoText, "", fmt.Sprintf("%s flipped %s!", m.currentPlayer, english.Plural(len(m.disksFlipped), "disk", "")))
-			}
-			infoText = append(infoText, "", lipgloss.NewStyle().
-				Foreground(lipgloss.Color("241")).
-				Render("any key: continue"))
-		}
+func createQuitConfirmationView(maxWidth int) string {
+	textStrings := []string{
+		"Are you sure you want to quit? Any game progress will be lost.",
+		"",
+		lipgloss.NewStyle().
+			Foreground(lipgloss.Color("241")).
+			Render("enter: quit • any other key: cancel"),
 	}
 
-	infoTextString := lipgloss.JoinVertical(lipgloss.Left, infoText...)
+	return lipgloss.NewStyle().
+		Width(maxWidth).
+		Render(lipgloss.JoinVertical(lipgloss.Left, textStrings...))
+}
+
+func createGameOverView(scores map[player]int, maxWidth int) string {
+	var resultString string
+	if scores[LightPlayer] == scores[DarkPlayer] {
+		resultString = "Draw!"
+	} else if scores[DarkPlayer] > scores[LightPlayer] {
+		resultString = fmt.Sprintf("%s won!", DarkPlayer)
+	} else if scores[LightPlayer] > scores[DarkPlayer] {
+		resultString = fmt.Sprintf("%s won!", LightPlayer)
+	}
+
+	scoreString := fmt.Sprintf("%s: %d; %s: %d", DarkPlayer.String(), scores[DarkPlayer], LightPlayer.String(),
+		scores[LightPlayer])
+
+	textStrings := []string{
+		lipgloss.NewStyle().
+			Foreground(lipgloss.Color("63")).
+			Bold(true).
+			Render("Game over!"),
+		"",
+		resultString,
+		scoreString,
+		"",
+		lipgloss.NewStyle().
+			Foreground(lipgloss.Color("241")).
+			Render("enter: play again • any other key: quit"),
+	}
 
 	return lipgloss.NewStyle().
-		Padding(2, 6).
-		Render(lipgloss.JoinHorizontal(lipgloss.Top, gridString, infoTextString))
+		Width(maxWidth).
+		Render(lipgloss.JoinVertical(lipgloss.Left, textStrings...))
+}
+
+func createPointSelectionView(m model, scores map[player]int, maxWidth int) string {
+	textStrings := make([]string, 0, 7)
+
+	textStrings = append(textStrings, createTurnText(m.currentPlayer))
+	textStrings = append(textStrings, createGameStatusText(scores))
+	textStrings = append(textStrings, "", "Choose where to place your disk")
+
+	availablePoints := getAvailablePoints(m.grid)
+	if slices.Contains(availablePoints, m.selectedPoint) {
+		textStrings = append(textStrings, lipgloss.NewStyle().
+			Foreground(lipgloss.Color("#00cc00")).
+			Render("Can place disk here"))
+		textStrings = append(textStrings, "", lipgloss.NewStyle().
+			Foreground(lipgloss.Color("241")).
+			Render("arrow keys: move • enter: place tile • q: exit"))
+	} else {
+		textStrings = append(textStrings, lipgloss.NewStyle().
+			Foreground(lipgloss.Color("#cc0000")).
+			Render("Cannot place disk here"))
+		textStrings = append(textStrings, "", lipgloss.NewStyle().
+			Foreground(lipgloss.Color("241")).
+			Render("arrow keys: move • q: exit"))
+	}
+
+	return lipgloss.NewStyle().
+		Width(maxWidth).
+		Render(lipgloss.JoinVertical(lipgloss.Left, textStrings...))
+}
+
+func createPointConfirmationView(m model, scores map[player]int, maxWidth int) string {
+	textStrings := make([]string, 0, 6)
+
+	textStrings = append(textStrings, createTurnText(m.currentPlayer))
+	textStrings = append(textStrings, createGameStatusText(scores))
+
+	if len(m.disksFlipped) == 0 {
+		textStrings = append(textStrings, "", "No disks flipped this time")
+	} else {
+		textStrings = append(textStrings, "", fmt.Sprintf("%s flipped %s!", m.currentPlayer, english.Plural(len(m.disksFlipped), "disk", "")))
+	}
+	textStrings = append(textStrings, "", lipgloss.NewStyle().
+		Foreground(lipgloss.Color("241")).
+		Render("any key: continue"))
+
+	return lipgloss.NewStyle().
+		Width(maxWidth).
+		Render(lipgloss.JoinVertical(lipgloss.Left, textStrings...))
+}
+
+func createTurnText(currentPlayer player) string {
+	return lipgloss.NewStyle().
+		Foreground(lipgloss.Color("63")).
+		Bold(true).
+		Render(fmt.Sprintf("%s (%s)'s turn", currentPlayer.String(), currentPlayer.toSymbol()))
+}
+
+func createGameStatusText(scores map[player]int) string {
+	var scoreStringBuilder strings.Builder
+	if scores[LightPlayer] == scores[DarkPlayer] {
+		scoreStringBuilder.WriteString("Draw")
+	} else if scores[DarkPlayer] > scores[LightPlayer] {
+		scoreStringBuilder.WriteString(fmt.Sprintf("%s winning!", DarkPlayer))
+	} else if scores[LightPlayer] > scores[DarkPlayer] {
+		scoreStringBuilder.WriteString(fmt.Sprintf("%s winning!", LightPlayer))
+	}
+	scoreStringBuilder.WriteString(" - ")
+	scoreStringBuilder.WriteString(fmt.Sprintf("%s: %d; %s: %d", DarkPlayer.String(), scores[DarkPlayer], LightPlayer.String(),
+		scores[LightPlayer]))
+
+	return scoreStringBuilder.String()
 }
 
 func main() {
