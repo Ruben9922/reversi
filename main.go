@@ -195,49 +195,6 @@ func getAvailablePoints(g grid) []vector2d {
 	return neighbors1
 }
 
-// so confused lol
-//func getNextAvailablePoint(availablePoints []vector2d, selectedPoint vector2d, direction vector2d) vector2d {
-//	availablePointsInDirection := make([]vector2d, 0, len(availablePoints))
-//	for _, p := range availablePoints {
-//		if (direction.x != 0 || p.x == selectedPoint.x) && (direction.y != 0 || p.y == selectedPoint.y) {
-//			availablePointsInDirection = append(availablePointsInDirection, p)
-//		}
-//	}
-//
-//	if len(availablePointsInDirection) == 0 {
-//		return selectedPoint
-//	}
-//
-//	sortedAvailablePointsInDirection := make([]vector2d, len(availablePointsInDirection))
-//	copy(sortedAvailablePointsInDirection, availablePointsInDirection)
-//	sort.Slice(sortedAvailablePointsInDirection, func(i, j int) bool {
-//		point1 := sortedAvailablePointsInDirection[i]
-//		point2 := sortedAvailablePointsInDirection[j]
-//
-//		if direction.x == -1 {
-//			if point1.x < selectedPoint.x {
-//				point1.x += gridWidth
-//			}
-//			if point2.x < selectedPoint.x {
-//				point2.x += gridWidth
-//			}
-//
-//			return point2.x > point2.x
-//		} else if direction.x == 1 {
-//			if point1.x > selectedPoint.x {
-//				point1.x += gridWidth
-//			}
-//			if point2.x > selectedPoint.x {
-//				point2.x += gridWidth
-//			}
-//
-//			return point2.x > point2.x
-//		}
-//	})
-//
-//	return sortedAvailablePointsInDirection[0]
-//}
-
 func isPointInsideGrid(p vector2d) bool {
 	return p.x >= 0 && p.x < gridWidth && p.y >= 0 && p.y < gridHeight
 }
