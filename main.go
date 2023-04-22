@@ -174,29 +174,32 @@ func getAvailablePoints(g grid, currentPlayer player) []vector2d {
 	}
 
 	// Get all neighbours of non-blank points in grid
-	neighbors := make([]vector2d, 0, len(nonBlankPoints)*8)
+	neighbors := make(map[vector2d]bool)
 	for _, nonBlankPoint := range nonBlankPoints {
 		for i := -1; i <= 1; i++ {
 			for j := -1; j <= 1; j++ {
 				if i != 0 || j != 0 {
 					neighbor := vector2d{nonBlankPoint.x + j, nonBlankPoint.y + i}
-					neighbors = append(neighbors, neighbor)
+					neighbors[neighbor] = true
 				}
 			}
 		}
 	}
 
-	// todo remove duplicates
 	// Keep only neighbours that are blank, inside the grid and will result in at least one flipped point
-	neighbors1 := make([]vector2d, 0, len(neighbors)) // todo: rename
-	for _, neighbor := range neighbors {
+	filteredNeighbors := make(map[vector2d]bool)
+	for neighbor := range neighbors {
 		if isPointInsideGrid(neighbor) && g[neighbor.y][neighbor.x] == Blank &&
 			len(getPointsToFlip(g, neighbor, currentPlayer)) > 0 {
-			neighbors1 = append(neighbors1, neighbor)
+			filteredNeighbors[neighbor] = true
 		}
 	}
 
-	return neighbors1
+	filteredNeighborsList := make([]vector2d, 0, len(filteredNeighbors))
+	for neighbor := range filteredNeighbors {
+		filteredNeighborsList = append(filteredNeighborsList, neighbor)
+	}
+	return filteredNeighborsList
 }
 
 func isPointInsideGrid(p vector2d) bool {
