@@ -107,16 +107,18 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.selectedPoint.x++
 				m.selectedPoint.x = (m.selectedPoint.x + gridWidth) % gridWidth
 			case "enter", " ":
-				availablePoints := getAvailablePoints(m.grid)
+				availablePoints := getAvailablePoints(m.grid, m.currentPlayer)
 
 				if slices.Contains(availablePoints, m.selectedPoint) {
 					m.grid[m.selectedPoint.y][m.selectedPoint.x] = m.currentPlayer
 
-					flip(&m)
+					pointsToFlip := getPointsToFlip(m.grid, m.selectedPoint, m.currentPlayer)
+					flip(&m.grid, pointsToFlip, m.currentPlayer)
+					m.disksFlipped = pointsToFlip
 
 					// If no available points at the end of the turn, it's game over
 					// Otherwise continue game and switch to PointConfirmation view
-					availablePoints = getAvailablePoints(m.grid)
+					availablePoints = getAvailablePoints(m.grid, m.currentPlayer)
 					if len(availablePoints) == 0 {
 						m.view = GameOverView
 					} else {
@@ -160,7 +162,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-func getAvailablePoints(g grid) []vector2d {
+func getAvailablePoints(g grid, currentPlayer player) []vector2d {
 	// Get all non-blank points in grid
 	nonBlankPoints := make([]vector2d, 0)
 	for i, row := range g {
@@ -184,10 +186,12 @@ func getAvailablePoints(g grid) []vector2d {
 		}
 	}
 
-	// Keep only neighbours that are blank and inside the grid
+	// todo remove duplicates
+	// Keep only neighbours that are blank, inside the grid and will result in at least one flipped point
 	neighbors1 := make([]vector2d, 0, len(neighbors)) // todo: rename
 	for _, neighbor := range neighbors {
-		if isPointInsideGrid(neighbor) && g[neighbor.y][neighbor.x] == Blank {
+		if isPointInsideGrid(neighbor) && g[neighbor.y][neighbor.x] == Blank &&
+			len(getPointsToFlip(g, neighbor, currentPlayer)) > 0 {
 			neighbors1 = append(neighbors1, neighbor)
 		}
 	}
@@ -199,7 +203,7 @@ func isPointInsideGrid(p vector2d) bool {
 	return p.x >= 0 && p.x < gridWidth && p.y >= 0 && p.y < gridHeight
 }
 
-func flip(m *model) {
+func getPointsToFlip(g grid, selectedPoint vector2d, currentPlayer player) []vector2d {
 	// Maybe generate these automatically
 	directions := []vector2d{
 		{0, 1},
@@ -212,11 +216,11 @@ func flip(m *model) {
 		{-1, 1},
 	}
 
-	m.disksFlipped = make([]vector2d, 0, 10)
+	disksFlipped := make([]vector2d, 0, 10)
 	for _, d := range directions {
-		currentPoint := m.selectedPoint
+		currentPoint := selectedPoint
 		isInsideGrid := isPointInsideGrid(currentPoint)
-		isNotBlank := m.grid[currentPoint.y][currentPoint.x] != Blank
+		isNotBlank := true
 		isCurrentPlayer := false
 		pointsToFlip := make([]vector2d, 0)
 		for isInsideGrid && isNotBlank && !isCurrentPlayer {
@@ -227,8 +231,8 @@ func flip(m *model) {
 				break
 			}
 
-			isNotBlank = m.grid[currentPoint.y][currentPoint.x] != Blank
-			isCurrentPlayer = m.grid[currentPoint.y][currentPoint.x] == m.currentPlayer
+			isNotBlank = g[currentPoint.y][currentPoint.x] != Blank
+			isCurrentPlayer = g[currentPoint.y][currentPoint.x] == currentPlayer
 
 			if isInsideGrid && isNotBlank && !isCurrentPlayer {
 				pointsToFlip = append(pointsToFlip, currentPoint)
@@ -238,13 +242,17 @@ func flip(m *model) {
 		// If disk of current player's colour is reached, change all the intermediate disks to the current player's colour
 		// If blank cell or edge of grid is reached, don't change any disks
 		if isCurrentPlayer {
-			for _, p := range pointsToFlip {
-				// Flip disk
-				m.grid[p.y][p.x] = m.currentPlayer
-			}
-
-			m.disksFlipped = append(m.disksFlipped, pointsToFlip...)
+			disksFlipped = append(disksFlipped, pointsToFlip...)
 		}
+	}
+
+	return disksFlipped
+}
+
+func flip(g *grid, points []vector2d, currentPlayer player) {
+	for _, p := range points {
+		// Flip disk
+		g[p.y][p.x] = currentPlayer
 	}
 }
 
@@ -323,7 +331,7 @@ func (m model) View() string {
 }
 
 func createGridView(m model) string {
-	availablePoints := getAvailablePoints(m.grid)
+	availablePoints := getAvailablePoints(m.grid, m.currentPlayer)
 
 	var gridStringBuilder strings.Builder
 	for i, row := range m.grid {
@@ -454,7 +462,7 @@ func createPointSelectionView(m model, scores map[player]int, maxWidth int) stri
 	textStrings = append(textStrings, createGameStatusText(scores))
 	textStrings = append(textStrings, "", "Choose where to place your disk")
 
-	availablePoints := getAvailablePoints(m.grid)
+	availablePoints := getAvailablePoints(m.grid, m.currentPlayer)
 	if slices.Contains(availablePoints, m.selectedPoint) {
 		textStrings = append(textStrings, lipgloss.NewStyle().
 			Foreground(lipgloss.Color("#00cc00")).
