@@ -310,8 +310,9 @@ func computeScores(g grid) map[player]int {
 
 func (m model) View() string {
 	scores := computeScores(m.grid)
+	availablePoints := getAvailablePoints(m.grid, m.currentPlayer)
 
-	gridString := createGridView(m)
+	gridString := createGridView(m, availablePoints)
 
 	var text string
 	maxTextWidth := m.windowSize.x - gridWidth - 14
@@ -323,7 +324,7 @@ func (m model) View() string {
 	case GameOverView:
 		text = createGameOverView(scores, maxTextWidth)
 	case PointSelection:
-		text = createPointSelectionView(m, scores, maxTextWidth)
+		text = createPointSelectionView(m, scores, maxTextWidth, availablePoints)
 	case PointConfirmation:
 		text = createPointConfirmationView(m, scores, maxTextWidth)
 	}
@@ -333,9 +334,7 @@ func (m model) View() string {
 		Render(lipgloss.JoinHorizontal(lipgloss.Top, gridString, text))
 }
 
-func createGridView(m model) string {
-	availablePoints := getAvailablePoints(m.grid, m.currentPlayer)
-
+func createGridView(m model, availablePoints []vector2d) string {
 	var gridStringBuilder strings.Builder
 	for i, row := range m.grid {
 		for j, cell := range row {
@@ -458,14 +457,13 @@ func createGameOverView(scores map[player]int, maxWidth int) string {
 		Render(lipgloss.JoinVertical(lipgloss.Left, textStrings...))
 }
 
-func createPointSelectionView(m model, scores map[player]int, maxWidth int) string {
+func createPointSelectionView(m model, scores map[player]int, maxWidth int, availablePoints []vector2d) string {
 	textStrings := make([]string, 0, 7)
 
 	textStrings = append(textStrings, createTurnText(m.currentPlayer))
 	textStrings = append(textStrings, createGameStatusText(scores))
 	textStrings = append(textStrings, "", "Choose where to place your disk")
 
-	availablePoints := getAvailablePoints(m.grid, m.currentPlayer)
 	if slices.Contains(availablePoints, m.selectedPoint) {
 		textStrings = append(textStrings, lipgloss.NewStyle().
 			Foreground(lipgloss.Color("#00cc00")).
