@@ -47,12 +47,13 @@ const (
 )
 
 type model struct {
-	grid          grid
-	selectedPoint vector2d
-	view          view
-	currentPlayer player
-	disksFlipped  []vector2d
-	windowSize    vector2d
+	grid            grid
+	selectedPoint   vector2d
+	view            view
+	currentPlayer   player
+	disksFlipped    []vector2d
+	windowSize      vector2d
+	availablePoints []vector2d
 }
 
 func newGrid() *grid {
@@ -73,12 +74,14 @@ func newGrid() *grid {
 }
 
 func initialModel() model {
+	g := *newGrid()
 	return model{
-		grid:          *newGrid(),
-		selectedPoint: vector2d{3, 3},
-		view:          TitleView,
-		currentPlayer: DarkPlayer,
-		disksFlipped:  make([]vector2d, 0),
+		grid:            g,
+		selectedPoint:   vector2d{3, 3},
+		view:            TitleView,
+		currentPlayer:   DarkPlayer,
+		disksFlipped:    make([]vector2d, 0),
+		availablePoints: getAvailablePoints(g, DarkPlayer),
 	}
 }
 
@@ -107,9 +110,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.selectedPoint.x++
 				m.selectedPoint.x = (m.selectedPoint.x + gridWidth) % gridWidth
 			case "enter", " ":
-				availablePoints := getAvailablePoints(m.grid, m.currentPlayer)
-
-				if slices.Contains(availablePoints, m.selectedPoint) {
+				if slices.Contains(m.availablePoints, m.selectedPoint) {
 					m.grid[m.selectedPoint.y][m.selectedPoint.x] = m.currentPlayer
 
 					pointsToFlip := getPointsToFlip(m.grid, m.selectedPoint, m.currentPlayer)
@@ -118,7 +119,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 					// If no available points at the end of the turn, it's game over
 					// Otherwise continue game and switch to PointConfirmation view
-					availablePoints = getAvailablePoints(m.grid, m.currentPlayer)
+					availablePoints := getAvailablePoints(m.grid, m.currentPlayer)
 					if len(availablePoints) == 0 {
 						m.view = GameOverView
 					} else {
@@ -135,6 +136,8 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			} else if m.currentPlayer == LightPlayer {
 				m.currentPlayer = DarkPlayer
 			}
+
+			m.availablePoints = getAvailablePoints(m.grid, m.currentPlayer)
 		case TitleView:
 			m.view = PointSelection
 		case QuitConfirmation:
@@ -310,9 +313,8 @@ func computeScores(g grid) map[player]int {
 
 func (m model) View() string {
 	scores := computeScores(m.grid)
-	availablePoints := getAvailablePoints(m.grid, m.currentPlayer)
 
-	gridString := createGridView(m, availablePoints)
+	gridString := createGridView(m)
 
 	var text string
 	maxTextWidth := m.windowSize.x - gridWidth - 14
@@ -324,7 +326,7 @@ func (m model) View() string {
 	case GameOverView:
 		text = createGameOverView(scores, maxTextWidth)
 	case PointSelection:
-		text = createPointSelectionView(m, scores, maxTextWidth, availablePoints)
+		text = createPointSelectionView(m, scores, maxTextWidth)
 	case PointConfirmation:
 		text = createPointConfirmationView(m, scores, maxTextWidth)
 	}
@@ -334,7 +336,7 @@ func (m model) View() string {
 		Render(lipgloss.JoinHorizontal(lipgloss.Top, gridString, text))
 }
 
-func createGridView(m model, availablePoints []vector2d) string {
+func createGridView(m model) string {
 	var gridStringBuilder strings.Builder
 	for i, row := range m.grid {
 		for j, cell := range row {
@@ -364,7 +366,7 @@ func createGridView(m model, availablePoints []vector2d) string {
 				case LightPlayer:
 					gridStringBuilder.WriteString(lightPlayerStyle.Render("O"))
 				default:
-					if slices.Contains(availablePoints, point) {
+					if slices.Contains(m.availablePoints, point) {
 						gridStringBuilder.WriteString(availablePointStyle.Render(" "))
 					} else {
 						gridStringBuilder.WriteString(" ")
@@ -457,14 +459,14 @@ func createGameOverView(scores map[player]int, maxWidth int) string {
 		Render(lipgloss.JoinVertical(lipgloss.Left, textStrings...))
 }
 
-func createPointSelectionView(m model, scores map[player]int, maxWidth int, availablePoints []vector2d) string {
+func createPointSelectionView(m model, scores map[player]int, maxWidth int) string {
 	textStrings := make([]string, 0, 7)
 
 	textStrings = append(textStrings, createTurnText(m.currentPlayer))
 	textStrings = append(textStrings, createGameStatusText(scores))
 	textStrings = append(textStrings, "", "Choose where to place your disk")
 
-	if slices.Contains(availablePoints, m.selectedPoint) {
+	if slices.Contains(m.availablePoints, m.selectedPoint) {
 		textStrings = append(textStrings, lipgloss.NewStyle().
 			Foreground(lipgloss.Color("#00cc00")).
 			Render("Can place disk here"))
