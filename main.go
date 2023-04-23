@@ -485,7 +485,8 @@ func createTitleView(maxWidth int, r rules) string {
 
 	textStrings := []string{
 		"",
-		fmt.Sprintf("Press R to toggle between Othello and Reversi rules (currently %s)", r),
+		fmt.Sprintf("Press R to toggle between Othello and Reversi rules\n(currently %s)", r),
+		"",
 		"Press any other key to start...",
 		"",
 		lipgloss.NewStyle().
