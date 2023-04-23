@@ -517,7 +517,7 @@ func createQuitConfirmationView(maxWidth int) string {
 func createGameOverView(m model, scores map[player]int, maxWidth int) string {
 	var resultString string
 	if scores[LightPlayer] == scores[DarkPlayer] {
-		resultString = "Draw!"
+		resultString = "Tie!"
 	} else if scores[DarkPlayer] > scores[LightPlayer] {
 		resultString = fmt.Sprintf("%s won!", DarkPlayer)
 	} else if scores[LightPlayer] > scores[DarkPlayer] {
@@ -629,7 +629,7 @@ func createTurnText(currentPlayer player) string {
 func createGameStatusText(scores map[player]int) string {
 	var scoreStringBuilder strings.Builder
 	if scores[LightPlayer] == scores[DarkPlayer] {
-		scoreStringBuilder.WriteString("Draw")
+		scoreStringBuilder.WriteString("Tie")
 	} else if scores[DarkPlayer] > scores[LightPlayer] {
 		scoreStringBuilder.WriteString(fmt.Sprintf("%s winning!", DarkPlayer))
 	} else if scores[LightPlayer] > scores[DarkPlayer] {
