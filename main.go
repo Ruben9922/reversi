@@ -502,7 +502,9 @@ func createTitleView(maxWidth int, r rules) string {
 
 func createQuitConfirmationView(maxWidth int) string {
 	textStrings := []string{
-		"Are you sure you want to quit? Any game progress will be lost.",
+		"Are you sure you want to quit?",
+		"",
+		"Any game progress will be lost.",
 		"",
 		lipgloss.NewStyle().
 			Foreground(lipgloss.Color("241")).
