@@ -34,6 +34,17 @@ func (p player) toSymbol() string {
 	return [...]string{"X", "O"}[p]
 }
 
+type rules int
+
+const (
+	ReversiRules rules = iota
+	OthelloRules
+)
+
+func (r rules) String() string {
+	return [...]string{"Reversi", "Othello"}[r]
+}
+
 type grid [gridHeight][gridWidth]player
 
 type view int
@@ -44,6 +55,7 @@ const (
 	TitleView
 	QuitConfirmation
 	GameOverView
+	PassView
 )
 
 type model struct {
@@ -54,9 +66,10 @@ type model struct {
 	disksFlipped    []vector2d
 	windowSize      vector2d
 	availablePoints []vector2d
+	rules           rules
 }
 
-func newGrid() *grid {
+func newGrid(r rules) *grid {
 	var g grid
 
 	for i := 0; i < gridHeight; i++ {
@@ -65,24 +78,33 @@ func newGrid() *grid {
 		}
 	}
 
-	g[3][3] = LightPlayer
-	g[4][4] = LightPlayer
-	g[3][4] = DarkPlayer
-	g[4][3] = DarkPlayer
+	if r == OthelloRules {
+		g[3][3] = LightPlayer
+		g[4][4] = LightPlayer
+		g[3][4] = DarkPlayer
+		g[4][3] = DarkPlayer
+	}
 
 	return &g
 }
 
-func initialModel() model {
-	g := *newGrid()
+func initialModelForRules(r rules) model {
+	initialPlayer := DarkPlayer
+	g := *newGrid(r)
+
 	return model{
 		grid:            g,
 		selectedPoint:   vector2d{3, 3},
 		view:            TitleView,
-		currentPlayer:   DarkPlayer,
+		currentPlayer:   initialPlayer,
 		disksFlipped:    make([]vector2d, 0),
-		availablePoints: getAvailablePoints(g, DarkPlayer),
+		availablePoints: getAvailablePoints(g, initialPlayer, r),
+		rules:           r,
 	}
+}
+
+func initialModel() model {
+	return initialModelForRules(OthelloRules)
 }
 
 func (m model) Init() tea.Cmd {
@@ -117,29 +139,45 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					flip(&m.grid, pointsToFlip, m.currentPlayer)
 					m.disksFlipped = pointsToFlip
 
-					// If no available points at the end of the turn, it's game over
-					// Otherwise continue game and switch to PointConfirmation view
-					availablePoints := getAvailablePoints(m.grid, m.currentPlayer)
-					if len(availablePoints) == 0 {
-						m.view = GameOverView
-					} else {
-						m.view = PointConfirmation
-					}
+					m.view = PointConfirmation
 				}
 			}
 		case PointConfirmation:
-			m.view = PointSelection
-
 			// Update current player *after* displaying PointConfirmation view
-			if m.currentPlayer == DarkPlayer {
-				m.currentPlayer = LightPlayer
-			} else if m.currentPlayer == LightPlayer {
-				m.currentPlayer = DarkPlayer
-			}
+			m.currentPlayer = toggleCurrentPlayer(m.currentPlayer)
 
-			m.availablePoints = getAvailablePoints(m.grid, m.currentPlayer)
+			// Update available points
+			availablePointsByPlayer := make(map[player][]vector2d)
+			availablePointsByPlayer[DarkPlayer] = getAvailablePoints(m.grid, DarkPlayer, m.rules)
+			availablePointsByPlayer[LightPlayer] = getAvailablePoints(m.grid, LightPlayer, m.rules)
+			m.availablePoints = availablePointsByPlayer[m.currentPlayer]
+
+			// If no available moves for current player then it's game over (for Reversi) or skip turn (for Othello)
+			// If no available moves for either player then it's game over
+			// Otherwise continue game and switch to PointSelection view
+			playersCanMove := make(map[player]bool)
+			playersCanMove[DarkPlayer] = len(availablePointsByPlayer[DarkPlayer]) > 0
+			playersCanMove[LightPlayer] = len(availablePointsByPlayer[LightPlayer]) > 0
+
+			if !playersCanMove[DarkPlayer] && !playersCanMove[LightPlayer] {
+				m.view = GameOverView
+			} else if !playersCanMove[m.currentPlayer] {
+				if m.rules == ReversiRules {
+					m.view = GameOverView
+				} else {
+					m.view = PassView
+				}
+			} else {
+				m.view = PointSelection
+			}
 		case TitleView:
-			m.view = PointSelection
+			switch msg.String() {
+			case "r":
+				m.rules = toggleRules(m.rules)
+				return initialModelForRules(m.rules), nil
+			default:
+				m.view = PointSelection
+			}
 		case QuitConfirmation:
 			switch msg.String() {
 			case "enter":
@@ -150,10 +188,14 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case GameOverView:
 			switch msg.String() {
 			case "enter":
-				return initialModel(), nil
+				return initialModelForRules(m.rules), nil
 			default:
 				return m, tea.Quit
 			}
+		case PassView:
+			m.currentPlayer = toggleCurrentPlayer(m.currentPlayer)
+			m.view = PointSelection
+			m.availablePoints = getAvailablePoints(m.grid, m.currentPlayer, m.rules)
 		}
 	case tea.WindowSizeMsg:
 		m.windowSize = vector2d{
@@ -165,8 +207,23 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-func getAvailablePoints(g grid, currentPlayer player) []vector2d {
-	// Get all non-blank points in grid
+func toggleCurrentPlayer(currentPlayer player) player {
+	if currentPlayer == DarkPlayer {
+		return LightPlayer
+	}
+
+	return DarkPlayer
+}
+
+func toggleRules(r rules) rules {
+	if r == ReversiRules {
+		return OthelloRules
+	}
+
+	return ReversiRules
+}
+
+func getNonBlankPoints(g grid) []vector2d {
 	nonBlankPoints := make([]vector2d, 0)
 	for i, row := range g {
 		for j, cell := range row {
@@ -174,6 +231,32 @@ func getAvailablePoints(g grid, currentPlayer player) []vector2d {
 				nonBlankPoints = append(nonBlankPoints, vector2d{j, i})
 			}
 		}
+	}
+	return nonBlankPoints
+}
+
+func getAvailablePoints(g grid, currentPlayer player, r rules) []vector2d {
+	// Get all non-blank points in grid
+	nonBlankPoints := getNonBlankPoints(g)
+
+	// Using Reversi rules, the first 4 disks must be placed with the centre 2x2 square in the grid
+	if r == ReversiRules && len(nonBlankPoints) < 4 {
+		availablePoints := []vector2d{
+			{3, 3},
+			{4, 4},
+			{3, 4},
+			{4, 3},
+		}
+
+		// Keep only points that are blank and inside the grid
+		filteredAvailablePoints := make([]vector2d, 0, len(availablePoints))
+		for _, p := range availablePoints {
+			if isPointInsideGrid(p) && g[p.y][p.x] == Blank {
+				filteredAvailablePoints = append(filteredAvailablePoints, p)
+			}
+		}
+
+		return filteredAvailablePoints
 	}
 
 	// Get all neighbours of non-blank points in grid
@@ -320,15 +403,17 @@ func (m model) View() string {
 	maxTextWidth := m.windowSize.x - gridWidth - 14
 	switch m.view {
 	case TitleView:
-		text = createTitleView(maxTextWidth)
+		text = createTitleView(maxTextWidth, m.rules)
 	case QuitConfirmation:
 		text = createQuitConfirmationView(maxTextWidth)
 	case GameOverView:
-		text = createGameOverView(scores, maxTextWidth)
+		text = createGameOverView(m, scores, maxTextWidth)
 	case PointSelection:
 		text = createPointSelectionView(m, scores, maxTextWidth)
 	case PointConfirmation:
 		text = createPointConfirmationView(m, scores, maxTextWidth)
+	case PassView:
+		text = createPassView(m, maxTextWidth)
 	}
 
 	return lipgloss.NewStyle().
@@ -391,7 +476,7 @@ func createGridView(m model) string {
 		Render(gridStringBuilder.String())
 }
 
-func createTitleView(maxWidth int) string {
+func createTitleView(maxWidth int, r rules) string {
 	const title = ` ____                         _ 
 |  _ \ _____   _____ _ __ ___(_)
 | |_) / _ \ \ / / _ \ '__/ __| |
@@ -400,11 +485,12 @@ func createTitleView(maxWidth int) string {
 
 	textStrings := []string{
 		"",
-		"Press any key to start...",
+		fmt.Sprintf("Press R to toggle between Othello and Reversi rules (currently %s)", r),
+		"Press any other key to start...",
 		"",
 		lipgloss.NewStyle().
 			Foreground(lipgloss.Color("241")).
-			Render("any key: continue"),
+			Render("r: toggle rules • any other key: continue"),
 	}
 	text := lipgloss.NewStyle().
 		Width(maxWidth).
@@ -427,7 +513,7 @@ func createQuitConfirmationView(maxWidth int) string {
 		Render(lipgloss.JoinVertical(lipgloss.Left, textStrings...))
 }
 
-func createGameOverView(scores map[player]int, maxWidth int) string {
+func createGameOverView(m model, scores map[player]int, maxWidth int) string {
 	var resultString string
 	if scores[LightPlayer] == scores[DarkPlayer] {
 		resultString = "Draw!"
@@ -440,11 +526,20 @@ func createGameOverView(scores map[player]int, maxWidth int) string {
 	scoreString := fmt.Sprintf("%s: %d; %s: %d", DarkPlayer.String(), scores[DarkPlayer], LightPlayer.String(),
 		scores[LightPlayer])
 
+	var infoString string
+	if m.rules == ReversiRules {
+		infoString = fmt.Sprintf("No available moves for %s.", m.currentPlayer)
+	} else {
+		infoString = "No available moves for either player."
+	}
+
 	textStrings := []string{
 		lipgloss.NewStyle().
 			Foreground(lipgloss.Color("63")).
 			Bold(true).
 			Render("Game over!"),
+		"",
+		infoString,
 		"",
 		resultString,
 		scoreString,
@@ -501,6 +596,22 @@ func createPointConfirmationView(m model, scores map[player]int, maxWidth int) s
 	textStrings = append(textStrings, "", lipgloss.NewStyle().
 		Foreground(lipgloss.Color("241")).
 		Render("any key: continue"))
+
+	return lipgloss.NewStyle().
+		Width(maxWidth).
+		Render(lipgloss.JoinVertical(lipgloss.Left, textStrings...))
+}
+
+func createPassView(m model, maxWidth int) string {
+	textStrings := make([]string, 0, 6)
+	textStrings = []string{
+		createTurnText(m.currentPlayer),
+		fmt.Sprintf("No available moves for %s; skipping turn...", m.currentPlayer),
+		"",
+		lipgloss.NewStyle().
+			Foreground(lipgloss.Color("241")).
+			Render("any key: continue"),
+	}
 
 	return lipgloss.NewStyle().
 		Width(maxWidth).
