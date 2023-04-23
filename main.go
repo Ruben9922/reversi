@@ -400,7 +400,7 @@ func (m model) View() string {
 	gridString := createGridView(m)
 
 	var text string
-	maxTextWidth := m.windowSize.x - gridWidth - 14
+	maxTextWidth := m.windowSize.x - ((gridWidth * 2) - 1) - 14
 	switch m.view {
 	case TitleView:
 		text = createTitleView(maxTextWidth, m.rules)
