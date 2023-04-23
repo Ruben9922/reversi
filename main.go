@@ -10,6 +10,8 @@ import (
 	"strings"
 )
 
+var Version = "development"
+
 const gridWidth = 8
 const gridHeight = 8
 
@@ -477,11 +479,14 @@ func createGridView(m model) string {
 }
 
 func createTitleView(maxWidth int, r rules) string {
-	const title = ` ____                         _ 
+	title := fmt.Sprintf(` ____                         _ 
 |  _ \ _____   _____ _ __ ___(_)
 | |_) / _ \ \ / / _ \ '__/ __| |
 |  _ <  __/\ V /  __/ |  \__ \ |
-|_| \_\___| \_/ \___|_|  |___/_|`
+|_| \_\___| \_/ \___|_|  |___/_|  %s`,
+		lipgloss.NewStyle().
+			Foreground(lipgloss.Color("241")).
+			Render(Version))
 
 	textStrings := []string{
 		"",
