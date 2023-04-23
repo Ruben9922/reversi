@@ -635,7 +635,7 @@ func createGameStatusText(scores map[player]int) string {
 	} else if scores[LightPlayer] > scores[DarkPlayer] {
 		scoreStringBuilder.WriteString(fmt.Sprintf("%s winning!", LightPlayer))
 	}
-	scoreStringBuilder.WriteString(" - ")
+	scoreStringBuilder.WriteString("\n")
 	scoreStringBuilder.WriteString(fmt.Sprintf("%s: %d; %s: %d", DarkPlayer.String(), scores[DarkPlayer], LightPlayer.String(),
 		scores[LightPlayer]))
 
