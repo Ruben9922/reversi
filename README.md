@@ -36,6 +36,16 @@ Run the program:
 ./reversi
 ```
 
+##### Unidentified developer error on macOS
+When running the program on macOS for the first time you may get an error saying the app can't be opened as it's from an unidentified developer. You can bypass the error as follows:
+1. Locate the `reversi` binary in Finder.
+2. Control-click the binary, then select Open from the menu.
+3. Click Open in the dialog.
+
+This only needs to be done once - in future you can open the app as normal by double-clicking on it.
+
+For more info, please see [this help page](https://support.apple.com/en-gb/guide/mac-help/mh40616/mac) on the Apple website.
+
 ### Using Snap (Linux or macOS only)
 If using Linux or macOS (with Snap installed), you can install via Snap using either the desktop store or the command line:
 ```bash
