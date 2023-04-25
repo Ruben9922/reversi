@@ -10,7 +10,7 @@ import (
 	"strings"
 )
 
-var Version = "development"
+var version = "dev"
 
 const gridWidth = 8
 const gridHeight = 8
@@ -486,7 +486,7 @@ func createTitleView(maxWidth int, r rules) string {
 |_| \_\___| \_/ \___|_|  |___/_|  %s`,
 		lipgloss.NewStyle().
 			Foreground(lipgloss.Color("241")).
-			Render(Version))
+			Render(version))
 
 	textStrings := []string{
 		"",
