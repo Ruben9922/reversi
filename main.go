@@ -20,6 +20,8 @@ type vector2d struct {
 	y int
 }
 
+var blankVector2d vector2d = vector2d{-1, -1}
+
 type player int
 
 const (
@@ -53,12 +55,24 @@ type view int
 
 const (
 	PointSelection view = iota
+	PointSelectionComputer
 	PointConfirmation
 	TitleView
 	QuitConfirmation
 	GameOverView
 	PassView
 )
+
+type playerMode int
+
+const (
+	OnePlayer playerMode = iota
+	TwoPlayer
+)
+
+func (pm playerMode) String() string {
+	return [...]string{"1-Player", "2-Player"}[pm]
+}
 
 type model struct {
 	grid            grid
@@ -69,6 +83,7 @@ type model struct {
 	windowSize      vector2d
 	availablePoints []vector2d
 	rules           rules
+	playerMode      playerMode
 }
 
 func newGrid(r rules) *grid {
@@ -102,6 +117,7 @@ func initialModelForRules(r rules) model {
 		disksFlipped:    make([]vector2d, 0),
 		availablePoints: getAvailablePoints(g, initialPlayer, r),
 		rules:           r,
+		playerMode:      OnePlayer,
 	}
 }
 
@@ -111,6 +127,30 @@ func initialModel() model {
 
 func (m model) Init() tea.Cmd {
 	return nil
+}
+
+func isComputerTurn(m model) bool {
+	if m.playerMode == OnePlayer && m.currentPlayer == LightPlayer {
+		return true
+	}
+
+	return false
+}
+
+func flipSelectedPoint(m *model) {
+	m.grid[m.selectedPoint.y][m.selectedPoint.x] = m.currentPlayer
+}
+
+func takeTurn(m *model) {
+	if slices.Contains(m.availablePoints, m.selectedPoint) {
+		flipSelectedPoint(m)
+
+		pointsToFlip := getPointsToFlip(m.grid, m.selectedPoint, m.currentPlayer)
+		flip(&m.grid, pointsToFlip, m.currentPlayer)
+		m.disksFlipped = pointsToFlip
+
+		m.view = PointConfirmation
+	}
 }
 
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -134,16 +174,10 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.selectedPoint.x++
 				m.selectedPoint.x = (m.selectedPoint.x + gridWidth) % gridWidth
 			case "enter", " ":
-				if slices.Contains(m.availablePoints, m.selectedPoint) {
-					m.grid[m.selectedPoint.y][m.selectedPoint.x] = m.currentPlayer
-
-					pointsToFlip := getPointsToFlip(m.grid, m.selectedPoint, m.currentPlayer)
-					flip(&m.grid, pointsToFlip, m.currentPlayer)
-					m.disksFlipped = pointsToFlip
-
-					m.view = PointConfirmation
-				}
+				takeTurn(&m)
 			}
+		case PointSelectionComputer:
+			takeTurn(&m)
 		case PointConfirmation:
 			// Update current player *after* displaying PointConfirmation view
 			m.currentPlayer = toggleCurrentPlayer(m.currentPlayer)
@@ -170,13 +204,21 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.view = PassView
 				}
 			} else {
-				m.view = PointSelection
+				if isComputerTurn(m) {
+					m.view = PointSelectionComputer
+					m.selectedPoint = computeBestPoint(m)
+					flipSelectedPoint(&m)
+				} else {
+					m.view = PointSelection
+				}
 			}
 		case TitleView:
 			switch msg.String() {
 			case "r":
 				m.rules = toggleRules(m.rules)
 				return initialModelForRules(m.rules), nil
+			case "p":
+				m.playerMode = togglePlayerMode(m.playerMode)
 			default:
 				m.view = PointSelection
 			}
@@ -209,6 +251,21 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
+func computeBestPoint(m model) vector2d {
+	var bestPoint vector2d
+	var maxFlippedPointsCount int
+
+	for _, p := range m.availablePoints {
+		flippedPointsCount := len(getPointsToFlip(m.grid, p, m.currentPlayer))
+		if flippedPointsCount > maxFlippedPointsCount {
+			bestPoint = p
+			maxFlippedPointsCount = flippedPointsCount
+		}
+	}
+
+	return bestPoint
+}
+
 func toggleCurrentPlayer(currentPlayer player) player {
 	if currentPlayer == DarkPlayer {
 		return LightPlayer
@@ -223,6 +280,14 @@ func toggleRules(r rules) rules {
 	}
 
 	return ReversiRules
+}
+
+func togglePlayerMode(pm playerMode) playerMode {
+	if pm == OnePlayer {
+		return TwoPlayer
+	}
+
+	return OnePlayer
 }
 
 func getNonBlankPoints(g grid) []vector2d {
@@ -405,17 +470,19 @@ func (m model) View() string {
 	maxTextWidth := m.windowSize.x - ((gridWidth * 2) - 1) - 14
 	switch m.view {
 	case TitleView:
-		text = createTitleView(maxTextWidth, m.rules)
+		text = createTitleView(maxTextWidth, m.rules, m.playerMode)
 	case QuitConfirmation:
 		text = createQuitConfirmationView(maxTextWidth)
 	case GameOverView:
 		text = createGameOverView(m, scores, maxTextWidth)
 	case PointSelection:
-		text = createPointSelectionView(m, scores, maxTextWidth)
+		text = createPointSelectionView(m, scores, maxTextWidth, false)
 	case PointConfirmation:
 		text = createPointConfirmationView(m, scores, maxTextWidth)
 	case PassView:
 		text = createPassView(m, maxTextWidth)
+	case PointSelectionComputer:
+		text = createPointSelectionView(m, scores, maxTextWidth, true)
 	}
 
 	return lipgloss.NewStyle().
@@ -428,7 +495,7 @@ func createGridView(m model) string {
 	for i, row := range m.grid {
 		for j, cell := range row {
 			point := vector2d{j, i}
-			if m.view == PointSelection && point == m.selectedPoint {
+			if (m.view == PointSelection || m.view == PointSelectionComputer) && point == m.selectedPoint {
 				switch cell {
 				case DarkPlayer:
 					gridStringBuilder.WriteString(selectedDarkPlayerStyle.Render("X"))
@@ -437,7 +504,8 @@ func createGridView(m model) string {
 				default:
 					gridStringBuilder.WriteString(selectedBlankStyle.Render(" "))
 				}
-			} else if m.view == PointConfirmation && m.grid[point.y][point.x] != Blank && !slices.Contains(m.disksFlipped, point) {
+			} else if (m.view == PointConfirmation && m.grid[point.y][point.x] != Blank && !slices.Contains(m.disksFlipped, point)) ||
+				(m.view == PointSelectionComputer && m.grid[point.y][point.x] != Blank && point != m.selectedPoint) {
 				switch cell {
 				case DarkPlayer:
 					gridStringBuilder.WriteString(highlightedDarkPlayerStyle.Render("X"))
@@ -478,7 +546,7 @@ func createGridView(m model) string {
 		Render(gridStringBuilder.String())
 }
 
-func createTitleView(maxWidth int, r rules) string {
+func createTitleView(maxWidth int, r rules, pm playerMode) string {
 	title := fmt.Sprintf(` ____                         _ 
 |  _ \ _____   _____ _ __ ___(_)
 | |_) / _ \ \ / / _ \ '__/ __| |
@@ -490,13 +558,14 @@ func createTitleView(maxWidth int, r rules) string {
 
 	textStrings := []string{
 		"",
+		fmt.Sprintf("Press P to toggle between 1-player and 2-player modes \n(currently %s)", pm),
 		fmt.Sprintf("Press R to toggle between Othello and Reversi rules\n(currently %s)", r),
 		"",
 		"Press any other key to start...",
 		"",
 		lipgloss.NewStyle().
 			Foreground(lipgloss.Color("241")).
-			Render("r: toggle rules • any other key: continue"),
+			Render("r: toggle rules • p: toggle player mode • any other key: continue"),
 	}
 	text := lipgloss.NewStyle().
 		Width(maxWidth).
@@ -562,27 +631,36 @@ func createGameOverView(m model, scores map[player]int, maxWidth int) string {
 		Render(lipgloss.JoinVertical(lipgloss.Left, textStrings...))
 }
 
-func createPointSelectionView(m model, scores map[player]int, maxWidth int) string {
+func createPointSelectionView(m model, scores map[player]int, maxWidth int, isComputerTurn bool) string {
 	textStrings := make([]string, 0, 7)
 
 	textStrings = append(textStrings, createTurnText(m.currentPlayer))
 	textStrings = append(textStrings, createGameStatusText(scores))
-	textStrings = append(textStrings, "", "Choose where to place your disk")
+	textStrings = append(textStrings, "")
 
-	if slices.Contains(m.availablePoints, m.selectedPoint) {
-		textStrings = append(textStrings, lipgloss.NewStyle().
-			Foreground(lipgloss.Color("#00cc00")).
-			Render("Can place disk here"))
+	if isComputerTurn {
+		textStrings = append(textStrings, "Computer places disk here")
 		textStrings = append(textStrings, "", lipgloss.NewStyle().
 			Foreground(lipgloss.Color("241")).
-			Render("arrow keys: move • enter: place tile • q: exit"))
+			Render("any key: continue"))
 	} else {
-		textStrings = append(textStrings, lipgloss.NewStyle().
-			Foreground(lipgloss.Color("#cc0000")).
-			Render("Cannot place disk here"))
-		textStrings = append(textStrings, "", lipgloss.NewStyle().
-			Foreground(lipgloss.Color("241")).
-			Render("arrow keys: move • q: exit"))
+		textStrings = append(textStrings, "Choose where to place your disk")
+
+		if slices.Contains(m.availablePoints, m.selectedPoint) {
+			textStrings = append(textStrings, lipgloss.NewStyle().
+				Foreground(lipgloss.Color("#00cc00")).
+				Render("Can place disk here"))
+			textStrings = append(textStrings, "", lipgloss.NewStyle().
+				Foreground(lipgloss.Color("241")).
+				Render("arrow keys: move • enter: place tile • q: exit"))
+		} else {
+			textStrings = append(textStrings, lipgloss.NewStyle().
+				Foreground(lipgloss.Color("#cc0000")).
+				Render("Cannot place disk here"))
+			textStrings = append(textStrings, "", lipgloss.NewStyle().
+				Foreground(lipgloss.Color("241")).
+				Render("arrow keys: move • q: exit"))
+		}
 	}
 
 	return lipgloss.NewStyle().
