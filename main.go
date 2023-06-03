@@ -558,14 +558,14 @@ func createTitleView(maxWidth int, r rules, pm playerMode) string {
 
 	textStrings := []string{
 		"",
-		fmt.Sprintf("Press P to toggle between 1-player and 2-player modes \n(currently %s)", pm),
-		fmt.Sprintf("Press R to toggle between Othello and Reversi rules\n(currently %s)", r),
+		createRadioButton([]playerMode{OnePlayer, TwoPlayer}, pm, "Player mode", "P"),
+		createRadioButton([]rules{OthelloRules, ReversiRules}, r, "Rules", "R"),
 		"",
 		"Press any other key to start...",
 		"",
 		lipgloss.NewStyle().
 			Foreground(lipgloss.Color("241")).
-			Render("r: toggle rules • p: toggle player mode • any other key: continue"),
+			Render("p: toggle player mode • r: toggle rules • any other key: continue"),
 	}
 	text := lipgloss.NewStyle().
 		Width(maxWidth).
@@ -686,6 +686,38 @@ func createPointConfirmationView(m model, scores map[player]int, maxWidth int) s
 	return lipgloss.NewStyle().
 		Width(maxWidth).
 		Render(lipgloss.JoinVertical(lipgloss.Left, textStrings...))
+}
+
+type radioButtonItem interface {
+	comparable
+	String() string
+}
+
+func createRadioButton[T radioButtonItem](options []T, selected T, label string, key string) string {
+	var builder strings.Builder
+	builder.WriteString(label)
+	builder.WriteString(": ")
+	for i, option := range options {
+		if option == selected {
+			builder.WriteString(lipgloss.NewStyle().
+				Foreground(lipgloss.Color("105")).
+				Render(option.String() + " [▪]"))
+		} else {
+			builder.WriteString(option.String() + " [ ]")
+		}
+
+		if i != len(options)-1 {
+			builder.WriteString(";")
+		}
+
+		builder.WriteString(" ")
+	}
+	builder.WriteString(
+		lipgloss.NewStyle().
+			Foreground(lipgloss.Color("241")).
+			Render(fmt.Sprintf("(press %s)", strings.ToUpper(key))))
+
+	return builder.String()
 }
 
 func createPassView(m model, maxWidth int) string {
