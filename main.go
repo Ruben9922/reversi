@@ -449,6 +449,9 @@ var highlightedBlankStyle = lipgloss.NewStyle().
 var availablePointStyle = lipgloss.NewStyle().
 	Background(lipgloss.Color("#212121"))
 
+var secondaryTextStyle = lipgloss.NewStyle().
+	Foreground(lipgloss.Color("241"))
+
 func computeScores(g grid) map[player]int {
 	m := make(map[player]int)
 	for _, row := range g {
@@ -552,9 +555,7 @@ func createTitleView(maxWidth int, r rules, pm playerMode) string {
 | |_) / _ \ \ / / _ \ '__/ __| |
 |  _ <  __/\ V /  __/ |  \__ \ |
 |_| \_\___| \_/ \___|_|  |___/_|  %s`,
-		lipgloss.NewStyle().
-			Foreground(lipgloss.Color("241")).
-			Render(version))
+		secondaryTextStyle.Render(version))
 
 	textStrings := []string{
 		"",
@@ -563,9 +564,7 @@ func createTitleView(maxWidth int, r rules, pm playerMode) string {
 		"",
 		"Press any other key to start...",
 		"",
-		lipgloss.NewStyle().
-			Foreground(lipgloss.Color("241")).
-			Render("p: toggle player mode • r: toggle rules • any other key: continue"),
+		secondaryTextStyle.Render("p: toggle player mode • r: toggle rules • any other key: continue"),
 	}
 	text := lipgloss.NewStyle().
 		Width(maxWidth).
@@ -580,9 +579,7 @@ func createQuitConfirmationView(maxWidth int) string {
 		"",
 		"Any game progress will be lost.",
 		"",
-		lipgloss.NewStyle().
-			Foreground(lipgloss.Color("241")).
-			Render("enter: quit • any other key: cancel"),
+		secondaryTextStyle.Render("enter: quit • any other key: cancel"),
 	}
 
 	return lipgloss.NewStyle().
@@ -621,9 +618,7 @@ func createGameOverView(m model, scores map[player]int, maxWidth int) string {
 		resultString,
 		scoreString,
 		"",
-		lipgloss.NewStyle().
-			Foreground(lipgloss.Color("241")).
-			Render("enter: play again • any other key: quit"),
+		secondaryTextStyle.Render("enter: play again • any other key: quit"),
 	}
 
 	return lipgloss.NewStyle().
@@ -640,9 +635,7 @@ func createPointSelectionView(m model, scores map[player]int, maxWidth int, isCo
 
 	if isComputerTurn {
 		textStrings = append(textStrings, "Computer places disk here")
-		textStrings = append(textStrings, "", lipgloss.NewStyle().
-			Foreground(lipgloss.Color("241")).
-			Render("any key: continue"))
+		textStrings = append(textStrings, "", secondaryTextStyle.Render("any key: continue"))
 	} else {
 		textStrings = append(textStrings, "Choose where to place your disk")
 
@@ -650,16 +643,12 @@ func createPointSelectionView(m model, scores map[player]int, maxWidth int, isCo
 			textStrings = append(textStrings, lipgloss.NewStyle().
 				Foreground(lipgloss.Color("#00cc00")).
 				Render("Can place disk here"))
-			textStrings = append(textStrings, "", lipgloss.NewStyle().
-				Foreground(lipgloss.Color("241")).
-				Render("arrow keys: move • enter: place tile • q: exit"))
+			textStrings = append(textStrings, "", secondaryTextStyle.Render("arrow keys: move • enter: place tile • q: exit"))
 		} else {
 			textStrings = append(textStrings, lipgloss.NewStyle().
 				Foreground(lipgloss.Color("#cc0000")).
 				Render("Cannot place disk here"))
-			textStrings = append(textStrings, "", lipgloss.NewStyle().
-				Foreground(lipgloss.Color("241")).
-				Render("arrow keys: move • q: exit"))
+			textStrings = append(textStrings, "", secondaryTextStyle.Render("arrow keys: move • q: exit"))
 		}
 	}
 
@@ -679,9 +668,7 @@ func createPointConfirmationView(m model, scores map[player]int, maxWidth int) s
 	} else {
 		textStrings = append(textStrings, "", fmt.Sprintf("%s flipped %s!", m.currentPlayer, english.Plural(len(m.disksFlipped), "disk", "")))
 	}
-	textStrings = append(textStrings, "", lipgloss.NewStyle().
-		Foreground(lipgloss.Color("241")).
-		Render("any key: continue"))
+	textStrings = append(textStrings, "", secondaryTextStyle.Render("any key: continue"))
 
 	return lipgloss.NewStyle().
 		Width(maxWidth).
@@ -712,10 +699,7 @@ func createRadioButton[T radioButtonItem](options []T, selected T, label string,
 
 		builder.WriteString(" ")
 	}
-	builder.WriteString(
-		lipgloss.NewStyle().
-			Foreground(lipgloss.Color("241")).
-			Render(fmt.Sprintf("(press %s)", strings.ToUpper(key))))
+	builder.WriteString(secondaryTextStyle.Render(fmt.Sprintf("(press %s)", strings.ToUpper(key))))
 
 	return builder.String()
 }
@@ -726,9 +710,7 @@ func createPassView(m model, maxWidth int) string {
 		createTurnText(m.currentPlayer),
 		fmt.Sprintf("No available moves for %s; skipping turn...", m.currentPlayer),
 		"",
-		lipgloss.NewStyle().
-			Foreground(lipgloss.Color("241")).
-			Render("any key: continue"),
+		secondaryTextStyle.Render("any key: continue"),
 	}
 
 	return lipgloss.NewStyle().
