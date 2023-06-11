@@ -410,8 +410,8 @@ func flip(g *grid, points []vector2d, currentPlayer player) {
 	}
 }
 
-const accentColor1 = "63"
-const accentColor2 = "105"
+const accentColor1 = lipgloss.Color("63")
+const accentColor2 = lipgloss.Color("105")
 
 var darkPlayerStyle = lipgloss.NewStyle().
 	Foreground(lipgloss.Color("#ffffff")).
@@ -424,15 +424,15 @@ var lightPlayerStyle = lipgloss.NewStyle().
 var selectedDarkPlayerStyle = lipgloss.NewStyle().
 	Underline(true).
 	Bold(true).
-	Foreground(lipgloss.Color(accentColor2)).
+	Foreground(accentColor2).
 	Background(lipgloss.Color("#000000"))
 
 var selectedLightPlayerStyle = lipgloss.NewStyle().
 	Foreground(lipgloss.Color("#000000")).
-	Background(lipgloss.Color(accentColor2))
+	Background(accentColor2)
 
 var selectedBlankStyle = lipgloss.NewStyle().
-	Background(lipgloss.Color(accentColor2))
+	Background(accentColor2)
 
 const highlightedColor = lipgloss.Color("#666666")
 
@@ -451,7 +451,7 @@ var secondaryTextStyle = lipgloss.NewStyle().
 	Foreground(lipgloss.Color("241"))
 
 var accent1TextStyle = lipgloss.NewStyle().
-	Foreground(lipgloss.Color(accentColor1)).
+	Foreground(accentColor1).
 	Bold(true)
 
 var successTextStyle = lipgloss.NewStyle().
@@ -550,7 +550,7 @@ func createGridView(m model) string {
 
 	return lipgloss.NewStyle().
 		BorderStyle(lipgloss.RoundedBorder()).
-		BorderForeground(lipgloss.Color(accentColor1)).
+		BorderForeground(accentColor1).
 		MarginRight(6).
 		Render(gridStringBuilder.String())
 }
@@ -686,7 +686,7 @@ func createRadioButton[T radioButtonItem](options []T, selected T, label string,
 	for i, option := range options {
 		if option == selected {
 			builder.WriteString(lipgloss.NewStyle().
-				Foreground(lipgloss.Color(accentColor2)).
+				Foreground(accentColor2).
 				Render(option.String() + " [▪]"))
 		} else {
 			builder.WriteString(option.String() + " [ ]")
