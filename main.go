@@ -431,7 +431,7 @@ var selectedLightPlayerStyle = lipgloss.NewStyle().
 var selectedBlankStyle = lipgloss.NewStyle().
 	Background(lipgloss.Color("105"))
 
-const highlightedColor = lipgloss.Color("#444444")
+const highlightedColor = lipgloss.Color("#666666")
 
 var highlightedDarkPlayerStyle = lipgloss.NewStyle().
 	Foreground(highlightedColor).
@@ -445,7 +445,7 @@ var highlightedBlankStyle = lipgloss.NewStyle().
 	Background(highlightedColor)
 
 var availablePointStyle = lipgloss.NewStyle().
-	Background(lipgloss.Color("#212121"))
+	Background(lipgloss.Color("#404040"))
 
 var secondaryTextStyle = lipgloss.NewStyle().
 	Foreground(lipgloss.Color("241"))
