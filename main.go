@@ -20,8 +20,6 @@ type vector2d struct {
 	y int
 }
 
-var blankVector2d vector2d = vector2d{-1, -1}
-
 type player int
 
 const (
