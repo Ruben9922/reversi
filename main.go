@@ -410,6 +410,9 @@ func flip(g *grid, points []vector2d, currentPlayer player) {
 	}
 }
 
+const accentColor1 = "63"
+const accentColor2 = "105"
+
 var darkPlayerStyle = lipgloss.NewStyle().
 	Foreground(lipgloss.Color("#ffffff")).
 	Background(lipgloss.Color("#000000"))
@@ -421,15 +424,15 @@ var lightPlayerStyle = lipgloss.NewStyle().
 var selectedDarkPlayerStyle = lipgloss.NewStyle().
 	Underline(true).
 	Bold(true).
-	Foreground(lipgloss.Color("105")).
+	Foreground(lipgloss.Color(accentColor2)).
 	Background(lipgloss.Color("#000000"))
 
 var selectedLightPlayerStyle = lipgloss.NewStyle().
 	Foreground(lipgloss.Color("#000000")).
-	Background(lipgloss.Color("105"))
+	Background(lipgloss.Color(accentColor2))
 
 var selectedBlankStyle = lipgloss.NewStyle().
-	Background(lipgloss.Color("105"))
+	Background(lipgloss.Color(accentColor2))
 
 const highlightedColor = lipgloss.Color("#666666")
 
@@ -441,14 +444,21 @@ var highlightedLightPlayerStyle = lipgloss.NewStyle().
 	Foreground(lipgloss.Color("#000000")).
 	Background(highlightedColor)
 
-var highlightedBlankStyle = lipgloss.NewStyle().
-	Background(highlightedColor)
-
 var availablePointStyle = lipgloss.NewStyle().
 	Background(lipgloss.Color("#404040"))
 
 var secondaryTextStyle = lipgloss.NewStyle().
 	Foreground(lipgloss.Color("241"))
+
+var accent1TextStyle = lipgloss.NewStyle().
+	Foreground(lipgloss.Color(accentColor1)).
+	Bold(true)
+
+var successTextStyle = lipgloss.NewStyle().
+	Foreground(lipgloss.Color("#00cc00"))
+
+var errorTextStyle = lipgloss.NewStyle().
+	Foreground(lipgloss.Color("#cc0000"))
 
 func computeScores(g grid) map[player]int {
 	m := make(map[player]int)
@@ -512,8 +522,6 @@ func createGridView(m model) string {
 					gridStringBuilder.WriteString(highlightedDarkPlayerStyle.Render("X"))
 				case LightPlayer:
 					gridStringBuilder.WriteString(highlightedLightPlayerStyle.Render("O"))
-				default:
-					gridStringBuilder.WriteString(highlightedBlankStyle.Render(" "))
 				}
 			} else {
 				switch cell {
@@ -542,7 +550,7 @@ func createGridView(m model) string {
 
 	return lipgloss.NewStyle().
 		BorderStyle(lipgloss.RoundedBorder()).
-		BorderForeground(lipgloss.Color("63")).
+		BorderForeground(lipgloss.Color(accentColor1)).
 		MarginRight(6).
 		Render(gridStringBuilder.String())
 }
@@ -606,10 +614,7 @@ func createGameOverView(m model, scores map[player]int, maxWidth int) string {
 	}
 
 	textStrings := []string{
-		lipgloss.NewStyle().
-			Foreground(lipgloss.Color("63")).
-			Bold(true).
-			Render("Game over!"),
+		accent1TextStyle.Render("Game over!"),
 		"",
 		infoString,
 		"",
@@ -638,14 +643,10 @@ func createPointSelectionView(m model, scores map[player]int, maxWidth int, isCo
 		textStrings = append(textStrings, "Choose where to place your disk")
 
 		if slices.Contains(m.availablePoints, m.selectedPoint) {
-			textStrings = append(textStrings, lipgloss.NewStyle().
-				Foreground(lipgloss.Color("#00cc00")).
-				Render("Can place disk here"))
+			textStrings = append(textStrings, successTextStyle.Render("Can place disk here"))
 			textStrings = append(textStrings, "", secondaryTextStyle.Render("arrow keys: move • enter: place tile • q: exit"))
 		} else {
-			textStrings = append(textStrings, lipgloss.NewStyle().
-				Foreground(lipgloss.Color("#cc0000")).
-				Render("Cannot place disk here"))
+			textStrings = append(textStrings, errorTextStyle.Render("Cannot place disk here"))
 			textStrings = append(textStrings, "", secondaryTextStyle.Render("arrow keys: move • q: exit"))
 		}
 	}
@@ -685,7 +686,7 @@ func createRadioButton[T radioButtonItem](options []T, selected T, label string,
 	for i, option := range options {
 		if option == selected {
 			builder.WriteString(lipgloss.NewStyle().
-				Foreground(lipgloss.Color("105")).
+				Foreground(lipgloss.Color(accentColor2)).
 				Render(option.String() + " [▪]"))
 		} else {
 			builder.WriteString(option.String() + " [ ]")
@@ -717,10 +718,7 @@ func createPassView(m model, maxWidth int) string {
 }
 
 func createTurnText(currentPlayer player) string {
-	return lipgloss.NewStyle().
-		Foreground(lipgloss.Color("63")).
-		Bold(true).
-		Render(fmt.Sprintf("%s (%s)'s turn", currentPlayer.String(), currentPlayer.toSymbol()))
+	return accent1TextStyle.Render(fmt.Sprintf("%s (%s)'s turn", currentPlayer.String(), currentPlayer.toSymbol()))
 }
 
 func createGameStatusText(scores map[player]int) string {
