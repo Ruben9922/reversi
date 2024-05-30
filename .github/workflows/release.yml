@@ -28,6 +28,12 @@ jobs:
       # It all depends on your needs.
       - name: Install Snapcraft
         uses: samuelmeuli/action-snapcraft@v2
+      # Run workaround to fix Snapcraft error (`FileExistsError`)
+      # Can remove it once it's eventually fixed
+      # https://github.com/goreleaser/goreleaser/issues/1715#issuecomment-667002748
+      # https://bugs.launchpad.net/snapcraft/+bug/1889741
+      - name: Run workaround to fix Snapcraft error
+        run: mkdir -p $HOME/.cache/snapcraft/download
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v5
         with:
