@@ -33,7 +33,9 @@ jobs:
       # https://github.com/goreleaser/goreleaser/issues/1715#issuecomment-667002748
       # https://bugs.launchpad.net/snapcraft/+bug/1889741
       - name: Run workaround to fix Snapcraft error
-        run: mkdir -p $HOME/.cache/snapcraft/download
+        run: |
+          mkdir -p $HOME/.cache/snapcraft/download
+          mkdir -p $HOME/.cache/snapcraft/stage-packages
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v5
         with:
