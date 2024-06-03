@@ -1,7 +1,7 @@
 # Reversi
 
 [![ruben-reversi](https://snapcraft.io/ruben-reversi/badge.svg)](https://snapcraft.io/ruben-reversi)
-[![goreleaser](https://github.com/Ruben9922/reversi/actions/workflows/release.yml/badge.svg)](https://github.com/Ruben9922/reversi/actions/workflows/release.yml)
+[![goreleaser](https://github.com/Ruben9922/reversi/actions/workflows/release.yml/badge.svg?event=push)](https://github.com/Ruben9922/reversi/actions/workflows/release.yml)
 [![GitHub](https://img.shields.io/github/license/Ruben9922/reversi)](https://github.com/Ruben9922/reversi/blob/master/LICENSE)
 
 Command-line version of the classic Reversi / Othello game.
