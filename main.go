@@ -251,7 +251,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func computeBestPoint(m model) vector2d {
 	var bestPoint vector2d
-	var maxFlippedPointsCount int
+	maxFlippedPointsCount := -1 // Initialising to -1 so `bestPoint` is always assigned even if `flippedPointsCount` is 0
 
 	for _, p := range m.availablePoints {
 		flippedPointsCount := len(getPointsToFlip(m.grid, p, m.currentPlayer))
