@@ -103,7 +103,7 @@ func newGrid(r rules) *grid {
 	return &g
 }
 
-func initialModelForRules(r rules) model {
+func createInitialModel(r rules, pm playerMode) model {
 	initialPlayer := DarkPlayer
 	g := *newGrid(r)
 
@@ -115,12 +115,12 @@ func initialModelForRules(r rules) model {
 		disksFlipped:    make([]vector2d, 0),
 		availablePoints: getAvailablePoints(g, initialPlayer, r),
 		rules:           r,
-		playerMode:      OnePlayer,
+		playerMode:      pm,
 	}
 }
 
 func initialModel() model {
-	return initialModelForRules(OthelloRules)
+	return createInitialModel(OthelloRules, OnePlayer)
 }
 
 func (m model) Init() tea.Cmd {
@@ -214,7 +214,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			switch msg.String() {
 			case "r":
 				m.rules = toggleRules(m.rules)
-				return initialModelForRules(m.rules), nil
+				return createInitialModel(m.rules, m.playerMode), nil
 			case "p":
 				m.playerMode = togglePlayerMode(m.playerMode)
 			default:
@@ -230,7 +230,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case GameOverView:
 			switch msg.String() {
 			case "enter":
-				return initialModelForRules(m.rules), nil
+				return createInitialModel(m.rules, m.playerMode), nil
 			default:
 				return m, tea.Quit
 			}
